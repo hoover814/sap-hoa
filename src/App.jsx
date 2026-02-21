@@ -6,6 +6,12 @@ const GOOGLE_SHEETS_CONFIG = {
   spreadsheetId: "15BjVviB6RcHlGjg_Kc9-GSgea7RgXKEVWhO44XDJEDQ",
   range: "Directory!A2:D",
 };
+
+const CONTRACTORS_SHEET_CONFIG = {
+  apiKey: "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
+  spreadsheetId: "1SIKmPyv8UnHPiv8Tc_0cxOMMFg-sWjM_",
+  range: "Contractors!A2:F",
+};
 const BOARD_PASSWORD = "SAP2026"; // change before deploying!
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
@@ -100,6 +106,31 @@ const S = {
   infoIcon:  { color:"#c9a84c", fontSize:14, marginTop:1, flexShrink:0 },
   codeBlock: { background:"rgba(0,0,0,.4)", border:"1px solid rgba(255,255,255,.1)", borderRadius:8, padding:14, fontFamily:"monospace", fontSize:12, color:"#a8d8b0", overflowX:"auto", marginTop:10 },
 };
+
+async function fetchContractors() {
+  const { apiKey, spreadsheetId, range } = CONTRACTORS_SHEET_CONFIG;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?key=${apiKey}`;
+  let res;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new Error("NETWORK_BLOCKED");
+  }
+  if (res.status === 403) throw new Error("API_KEY_ERROR");
+  if (res.status === 404) throw new Error("SHEET_NOT_FOUND");
+  if (!res.ok) throw new Error("SHEETS_ERROR");
+  const data = await res.json();
+  if (!data.values || data.values.length === 0) return [];
+  return data.values.map((row, i) => ({
+    id: i + 1,
+    category: row[0]||"others",
+    business:  row[1]||"",
+    contact:   row[2]||"",
+    phone:     row[3]||"",
+    website:   row[4]||"",
+    note:      row[5]||"",
+  }));
+}
 
 // ── LEAFLET LOADER ────────────────────────────────────────────────────────────
 function useLeaflet(onReady) {
@@ -639,6 +670,7 @@ const CONTRACTOR_CATEGORIES = [
   { id: "painters",     label: "Painters",          icon: "🎨" },
   { id: "roofers",      label: "Roofers",            icon: "🏠" },
   { id: "plumbing",     label: "Plumbing",           icon: "🔧" },
+  { id: "electrical",   label: "Electrical",         icon: "⚡" },
   { id: "ac_heating",   label: "A/C & Heating",      icon: "❄️" },
   { id: "realtors",     label: "Realtors",           icon: "🏡" },
   { id: "landscaping",  label: "Landscaping",        icon: "🌿" },
@@ -657,11 +689,30 @@ const SAMPLE_CONTRACTORS = [
 // ── CONTRACTORS TAB ────────────────────────────────────────────────────────────
 function Contractors() {
   const [contractors, setContractors] = useState(SAMPLE_CONTRACTORS);
+  const [loading, setLoading]         = useState(false);
+  const [sheetError, setSheetError]   = useState(null);
+  const [usingSheets, setUsingSheets] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [newC, setNewC] = useState({ category:"painters", business:"", contact:"", phone:"", website:"", note:"" });
   const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const loadContractors = () => {
+    setLoading(true); setSheetError(null); setUsingSheets(true);
+    fetchContractors()
+      .then(d => {
+        if (d.length > 0) setContractors(d);
+        setLoading(false);
+      })
+      .catch(e => {
+        setUsingSheets(false);
+        setSheetError(e.message);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => { loadContractors(); }, []);
 
   const addContractor = () => {
     if (!newC.business.trim()) return;
@@ -687,6 +738,7 @@ function Contractors() {
     painters:    "#5b8dee",
     roofers:     "#e09a3a",
     plumbing:    "#3ab8c9",
+    electrical:  "#f5c542",
     ac_heating:  "#7c5be0",
     realtors:    "#c9a84c",
     landscaping: "#4caf87",
@@ -696,7 +748,23 @@ function Contractors() {
   return (
     <div>
       <div style={S.secHead}>🔨 Contractor Directory</div>
-      <div style={S.secSub}>Community-recommended contractors for home improvements. Add one you've used!</div>
+      <div style={S.secSub}>
+        {usingSheets ? "✅ Live data synced from Google Sheets." : sheetError === "NETWORK_BLOCKED" ? "👁 Preview mode — showing sample data. Live data loads on GitHub Pages." : "📋 Sample data shown."}
+        {" "}<strong style={{color:"#c9a84c"}}>{contractors.length}</strong> contractors listed.
+      </div>
+      {sheetError && sheetError !== "NETWORK_BLOCKED" && (
+        <div style={{ ...S.card, border:"1px solid rgba(224,92,92,.3)", background:"rgba(224,92,92,.07)", marginBottom:16 }}>
+          <div style={{color:"#e05c5c", fontWeight:"bold", marginBottom:6}}>⚠️ Could Not Connect to Google Sheets</div>
+          <div style={{color:"#8faa9a", fontSize:13, marginBottom:10}}>
+            {sheetError === "API_KEY_ERROR" ? "API key rejected — check Google Cloud Console restrictions."
+            : sheetError === "SHEET_NOT_FOUND" ? "Sheet not found — make sure it is shared as 'Anyone with the link can view'."
+            : "Unable to reach Google Sheets. Showing sample data."}
+          </div>
+          <button style={{...S.btnSm}} onClick={loadContractors}>↻ Retry</button>
+        </div>
+      )}
+
+      {loading && <div style={{textAlign:"center",color:"#8faa9a",padding:40}}>⏳ Loading contractors from Google Sheets...</div>}
 
       {/* Category filter pills */}
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20 }}>
