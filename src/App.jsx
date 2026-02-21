@@ -134,9 +134,20 @@ async function fetchContractors() {
   if (!res.ok) throw new Error("SHEETS_ERROR");
   const data = await res.json();
   if (!data.values || data.values.length === 0) return [];
+  // Map Sheet display names back to category IDs used in the portal
+  const categoryMap = {
+    "Painters":      "painters",
+    "Roofers":       "roofers",
+    "Plumbing":      "plumbing",
+    "Electrical":    "electrical",
+    "A/C & Heating": "ac_heating",
+    "Realtors":      "realtors",
+    "Landscaping":   "landscaping",
+    "Others":        "others",
+  };
   return data.values.map((row, i) => ({
     id: i + 1,
-    category: row[0]||"others",
+    category: categoryMap[row[0]] || "others",
     business:  row[1]||"",
     contact:   row[2]||"",
     phone:     row[3]||"",
@@ -559,9 +570,10 @@ function Dashboard({ onNavigate }) {
   }, []);
 
   const quickLinks = [
-    { icon:"👥", label:"Neighborhood Directory", desc:"Find your neighbors' contact info", tab:"directory" },
-    { icon:"📰", label:"Newsletter",             desc:"Read the latest community newsletter", tab:"newsletter" },
-    { icon:"📋", label:"Meeting Minutes",        desc:"View HOA board meeting notes", tab:"minutes" },
+    { icon:"👥", label:"Neighborhood Directory", desc:"Find your neighbors' contact info",          tab:"directory" },
+    { icon:"🔨", label:"Contractors",            desc:"Community-recommended home service pros",    tab:"contractors" },
+    { icon:"📰", label:"Newsletter",             desc:"Read the latest community newsletter",       tab:"newsletter" },
+    { icon:"📋", label:"Meeting Minutes",        desc:"View HOA board meeting notes",               tab:"minutes" },
   ];
 
   return (
