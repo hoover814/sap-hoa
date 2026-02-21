@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // ── CONFIGURATION — update these when deploying to GitHub ──────────────────────
 const GOOGLE_SHEETS_CONFIG = {
@@ -6,26 +6,51 @@ const GOOGLE_SHEETS_CONFIG = {
   spreadsheetId: "15BjVviB6RcHlGjg_Kc9-GSgea7RgXKEVWhO44XDJEDQ",
   range: "Directory!A2:D",
 };
+
+const CONTRACTORS_SHEET_CONFIG = {
+  apiKey: "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
+  spreadsheetId: "1SIKmPyv8UnHPiv8Tc_0cxOMMFg-sWjM_",
+  range: "Contractors!A2:F",
+};
+// Paste your Apps Script Web App URL here after deploying the script
+const CONTRACTORS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_kQPd_v2GAtGbTSP1LLOpxmTM_eKSkPjDkJb4UpCmNLZovqlRk7xY-ed898h-01LP/exec";
 const BOARD_PASSWORD = "SAP2026"; // change before deploying!
+
+// ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
+const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
+const NEIGHBORHOOD_ZOOM   = 17;
+
+// Street name → approximate lat/lng lookup for Saints Drive/Court addresses
+const STREET_COORDS = {
+  "saints drive": { lat: 33.96928, lngBase: -84.39520, lngStep: 0.00015 },
+  "saints court": { lat: 33.96980, lngBase: -84.39430, lngStep: 0.00015 },
+};
+
+function getApproxCoords(address) {
+  if (!address) return null;
+  const lower = address.toLowerCase();
+  const numMatch = address.match(/\d+/);
+  const num = numMatch ? parseInt(numMatch[0]) : 900;
+  for (const [street, data] of Object.entries(STREET_COORDS)) {
+    if (lower.includes(street)) {
+      const offset = ((num - 840) / 10) * data.lngStep;
+      return [data.lat + (Math.random() * 0.0003 - 0.00015), data.lngBase - offset];
+    }
+  }
+  return [NEIGHBORHOOD_CENTER[0] + (Math.random()*0.002-0.001),
+          NEIGHBORHOOD_CENTER[1] + (Math.random()*0.002-0.001)];
+}
 
 // ── TABS ───────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "dashboard",  label: "🏡 Dashboard" },
-  { id: "directory",  label: "👥 Directory" },
-  { id: "tasks",      label: "✅ Task Tracker" },
-  { id: "newsletter", label: "📰 Newsletter" },
-  { id: "minutes",    label: "📋 Meeting Minutes" },
-  { id: "website",    label: "🌐 Website Tracker" },
+  { id: "dashboard",   label: "🏡 Dashboard" },
+  { id: "directory",   label: "👥 Directory" },
+  { id: "contractors", label: "🔨 Contractors" },
+  { id: "newsletter",  label: "📰 Newsletter" },
+  { id: "minutes",     label: "📋 Meeting Minutes" },
 ];
 
-const initialTasks = [
-  { id: 1, text: "Replace personal emails with shared HOA email", priority: "High", status: "Todo", category: "Website" },
-  { id: 2, text: "Add Quick-Link buttons to home page", priority: "High", status: "Todo", category: "Website" },
-  { id: 3, text: "Embed Google Calendar on Events section", priority: "Medium", status: "Todo", category: "Website" },
-  { id: 4, text: "Add board member role titles to Contact page", priority: "Medium", status: "Todo", category: "Website" },
-  { id: 5, text: "Add neighborhood hero photo/banner", priority: "Low", status: "Todo", category: "Website" },
-  { id: 6, text: "Add document descriptions on Forms & Bylaws page", priority: "Low", status: "Todo", category: "Website" },
-];
+
 
 const SAMPLE_NEIGHBORS = [
   { id: 1, name: "The Johnson Family",   address: "101 Saint Andrews Dr", phone: "(404) 555-0101", email: "johnson@email.com" },
@@ -36,8 +61,7 @@ const SAMPLE_NEIGHBORS = [
   { id: 6, name: "David Garcia",         address: "111 Saint Andrews Dr", phone: "(404) 555-0106", email: "dgarcia@email.com" },
 ];
 
-const priorityColor = { High: "#e05c5c", Medium: "#e09a3a", Low: "#4caf87" };
-const statusColor   = { Todo: "#8b9db5", "In Progress": "#5b8dee", Done: "#4caf87" };
+
 
 const avatarGradients = [
   "linear-gradient(135deg,#2d5a3d,#4caf87)",
@@ -85,6 +109,46 @@ const S = {
   codeBlock: { background:"rgba(0,0,0,.4)", border:"1px solid rgba(255,255,255,.1)", borderRadius:8, padding:14, fontFamily:"monospace", fontSize:12, color:"#a8d8b0", overflowX:"auto", marginTop:10 },
 };
 
+async function fetchContractors() {
+  const { apiKey, spreadsheetId, range } = CONTRACTORS_SHEET_CONFIG;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?key=${apiKey}`;
+  let res;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new Error("NETWORK_BLOCKED");
+  }
+  if (res.status === 403) throw new Error("API_KEY_ERROR");
+  if (res.status === 404) throw new Error("SHEET_NOT_FOUND");
+  if (!res.ok) throw new Error("SHEETS_ERROR");
+  const data = await res.json();
+  if (!data.values || data.values.length === 0) return [];
+  return data.values.map((row, i) => ({
+    id: i + 1,
+    category: row[0]||"others",
+    business:  row[1]||"",
+    contact:   row[2]||"",
+    phone:     row[3]||"",
+    website:   row[4]||"",
+    note:      row[5]||"",
+  }));
+}
+
+// ── LEAFLET LOADER ────────────────────────────────────────────────────────────
+function useLeaflet(onReady) {
+  useEffect(() => {
+    if (window.L) { onReady(window.L); return; }
+    const css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    document.head.appendChild(css);
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.onload = () => onReady(window.L);
+    document.head.appendChild(script);
+  }, []);
+}
+
 const sheetsConfigured = () =>
   GOOGLE_SHEETS_CONFIG.apiKey !== "YOUR_API_KEY_HERE" &&
   GOOGLE_SHEETS_CONFIG.spreadsheetId !== "YOUR_SPREADSHEET_ID_HERE";
@@ -108,6 +172,122 @@ async function fetchFromSheets() {
   }));
 }
 
+// ── NEIGHBORHOOD MAP ──────────────────────────────────────────────────────────
+function NeighborhoodMap({ neighbors, selectedId, onSelectPin }) {
+  const mapRef    = useRef(null);
+  const leafletMap = useRef(null);
+  const markersRef = useRef({});
+
+  useLeaflet(L => {
+    if (leafletMap.current) return;
+    const map = L.map(mapRef.current, {
+      center: NEIGHBORHOOD_CENTER,
+      zoom: NEIGHBORHOOD_ZOOM,
+      zoomControl: true,
+    });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Custom gold pin icon
+    const pinIcon = L.divIcon({
+      className: "",
+      html: `<div style="
+        width:28px;height:28px;border-radius:50% 50% 50% 0;
+        background:linear-gradient(135deg,#c9a84c,#e8cc80);
+        border:2px solid #fff;
+        transform:rotate(-45deg);
+        box-shadow:0 2px 6px rgba(0,0,0,.4);
+        cursor:pointer;
+      "></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -30],
+    });
+
+    const selectedIcon = L.divIcon({
+      className: "",
+      html: `<div style="
+        width:34px;height:34px;border-radius:50% 50% 50% 0;
+        background:linear-gradient(135deg,#4caf87,#2d9e6f);
+        border:2px solid #fff;
+        transform:rotate(-45deg);
+        box-shadow:0 3px 10px rgba(76,175,135,.6);
+        cursor:pointer;
+      "></div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 34],
+      popupAnchor: [0, -36],
+    });
+
+    neighbors.forEach(n => {
+      const coords = getApproxCoords(n.address);
+      if (!coords) return;
+      const marker = L.marker(coords, { icon: pinIcon })
+        .addTo(map)
+        .bindPopup(`
+          <div style="font-family:Georgia,serif;min-width:160px;">
+            <div style="font-weight:bold;font-size:14px;color:#1a2332;margin-bottom:4px;">${n.name}</div>
+            <div style="font-size:12px;color:#555;">📍 ${n.address}</div>
+          </div>
+        `, { maxWidth: 220 });
+      marker.on("click", () => onSelectPin(n.id));
+      markersRef.current[n.id] = { marker, coords, pinIcon, selectedIcon };
+    });
+
+    leafletMap.current = map;
+  });
+
+  // Highlight selected pin
+  useEffect(() => {
+    if (!leafletMap.current) return;
+    Object.entries(markersRef.current).forEach(([id, {marker, pinIcon, selectedIcon}]) => {
+      marker.setIcon(parseInt(id) === selectedId ? selectedIcon : pinIcon);
+    });
+    if (selectedId && markersRef.current[selectedId]) {
+      const { coords, marker } = markersRef.current[selectedId];
+      leafletMap.current.setView(coords, 18, { animate: true });
+      marker.openPopup();
+    }
+  }, [selectedId]);
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div style={S.cardTitle}>🗺️ Neighborhood Map</div>
+      <div style={{ color:"#8faa9a", fontSize:13, marginBottom:12 }}>
+        Click a neighbor card above to highlight their location on the map. Click a pin to see their name and address.
+      </div>
+      <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+        <div ref={mapRef} style={{
+          flex:1, minWidth:300, height:420, borderRadius:12,
+          border:"1px solid rgba(201,168,76,.3)",
+          overflow:"hidden", zIndex:0,
+        }} />
+        <div style={{ width:200, display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{...S.card, marginBottom:0, padding:16}}>
+            <div style={{color:"#c9a84c",fontWeight:"bold",fontSize:13,marginBottom:10}}>📍 Map Legend</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <div style={{width:14,height:14,borderRadius:"50%",background:"linear-gradient(135deg,#c9a84c,#e8cc80)",border:"1px solid #fff",flexShrink:0}}/>
+              <span style={{color:"#8faa9a",fontSize:12}}>Neighbor</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:14,height:14,borderRadius:"50%",background:"linear-gradient(135deg,#4caf87,#2d9e6f)",border:"1px solid #fff",flexShrink:0}}/>
+              <span style={{color:"#8faa9a",fontSize:12}}>Selected</span>
+            </div>
+          </div>
+          <div style={{...S.card, marginBottom:0, padding:16}}>
+            <div style={{color:"#c9a84c",fontWeight:"bold",fontSize:13,marginBottom:6}}>ℹ️ Note</div>
+            <div style={{color:"#8faa9a",fontSize:11,lineHeight:1.6}}>
+              Pin locations are approximate based on street addresses. Exact positions may vary slightly.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── NEIGHBORHOOD DIRECTORY ─────────────────────────────────────────────────────
 function NeighborhoodDirectory() {
   const [neighbors, setNeighbors] = useState(SAMPLE_NEIGHBORS);
@@ -125,6 +305,7 @@ function NeighborhoodDirectory() {
   const [newN, setNewN]           = useState({ name:"", address:"", phone:"", email:"" });
 
   const [search, setSearch] = useState("");
+  const [selectedPin, setSelectedPin] = useState(null);
 
   const loadFromSheets = () => {
     setLoading(true); setSheetError(null); setUsingSheets(true);
@@ -170,6 +351,15 @@ function NeighborhoodDirectory() {
         {usingSheets ? "✅ Live data synced from Google Sheets." : sheetError === "NETWORK_BLOCKED" ? "👁 Preview mode — showing sample data. Live data loads on GitHub Pages." : "📋 Sample data shown."}
         {" "}<strong style={{color:"#c9a84c"}}>{neighbors.length}</strong> neighbors listed.
       </div>
+
+      {/* Neighborhood Map — top */}
+      {!loading && neighbors.length > 0 && (
+        <NeighborhoodMap
+          neighbors={neighbors}
+          selectedId={selectedPin}
+          onSelectPin={id => setSelectedPin(id === selectedPin ? null : id)}
+        />
+      )}
 
       {/* Google Sheets setup guide */}
       {!sheetsConfigured() && (
@@ -275,11 +465,13 @@ const GOOGLE_SHEETS_CONFIG = {
       {!loading && (
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:16, marginTop:8 }}>
           {filtered.map((n,idx) => (
-            <div key={n.id} style={{
-              background: editingId===n.id ? "rgba(201,168,76,.09)" : "rgba(255,255,255,.05)",
-              border: editingId===n.id ? "1px solid rgba(201,168,76,.5)" : "1px solid rgba(201,168,76,.15)",
-              borderRadius:12, padding:20, transition:"all .2s",
-            }}>
+            <div key={n.id}
+              onClick={()=>{ if(editingId!==n.id) setSelectedPin(n.id===selectedPin?null:n.id); }}
+              style={{
+                background: selectedPin===n.id ? "rgba(76,175,135,.1)" : editingId===n.id ? "rgba(201,168,76,.09)" : "rgba(255,255,255,.05)",
+                border: selectedPin===n.id ? "1px solid rgba(76,175,135,.5)" : editingId===n.id ? "1px solid rgba(201,168,76,.5)" : "1px solid rgba(201,168,76,.15)",
+                borderRadius:12, padding:20, transition:"all .2s", cursor: editingId===n.id ? "default" : "pointer",
+              }}>
               {editingId===n.id ? (
                 <div>
                   <div style={{color:"#c9a84c",fontWeight:"bold",marginBottom:12}}>✏️ Editing Record</div>
@@ -342,96 +534,49 @@ const GOOGLE_SHEETS_CONFIG = {
           </div>
         </div>
       )}
+
     </div>
   );
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────────────
-function Dashboard({ tasks }) {
-  const done=tasks.filter(t=>t.status==="Done").length,
-        inp =tasks.filter(t=>t.status==="In Progress").length,
-        todo=tasks.filter(t=>t.status==="Todo").length,
-        high=tasks.filter(t=>t.priority==="High"&&t.status!=="Done").length;
-
-  const siteChecks=[
-    {label:"Replace personal emails with shared HOA address", s:"🔴 Pending"},
-    {label:"Add Quick-Link buttons to home page",             s:"🔴 Pending"},
-    {label:"Embed Google Calendar",                          s:"🟡 Planned"},
-    {label:"Add board member role titles",                   s:"🟡 Planned"},
-    {label:"Add neighborhood hero banner",                   s:"🟢 Backlog"},
+function Dashboard() {
+  const quickLinks = [
+    { icon:"👥", label:"Neighborhood Directory", desc:"Find your neighbors' contact info", tab:"directory" },
+    { icon:"📰", label:"Newsletter",             desc:"Read the latest community newsletter", tab:"newsletter" },
+    { icon:"📋", label:"Meeting Minutes",        desc:"View HOA board meeting notes", tab:"minutes" },
   ];
 
   return (
     <div>
-      <div style={S.secHead}>Welcome Back, Board! 👋</div>
-      <div style={S.secSub}>Here's a snapshot of everything happening at Saint Andrews Park HOA.</div>
-      <div style={S.grid3}>
-        {[[todo,"Tasks To Do","201,168,76"],[inp,"In Progress","91,141,238"],[done,"Completed","76,175,135"],[high,"High Priority Open","224,92,92"]].map(([n,l,a])=>(
-          <div key={l} style={S.statCard(a)}><div style={S.statNum}>{n}</div><div style={S.statLabel}>{l}</div></div>
-        ))}
-      </div>
-      <div style={S.card}>
-        <div style={S.cardTitle}>📌 High Priority Tasks</div>
-        {tasks.filter(t=>t.priority==="High"&&t.status!=="Done").length===0
-          ? <p style={{color:"#4caf87"}}>🎉 All high priority tasks are complete!</p>
-          : tasks.filter(t=>t.priority==="High"&&t.status!=="Done").map(t=>(
-            <div key={t.id} style={{padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span>{t.text}</span><span style={S.tag}>{t.category}</span>
-            </div>
-          ))
-        }
-      </div>
-      <div style={S.card}>
-        <div style={S.cardTitle}>🌐 Website Enhancement Checklist</div>
-        {siteChecks.map((c,i)=>(
-          <div key={i} style={{padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,.05)",display:"flex",justifyContent:"space-between"}}>
-            <span style={{fontSize:14}}>{c.label}</span>
-            <span style={{fontSize:13,color:"#8faa9a"}}>{c.s}</span>
+      <div style={S.secHead}>Welcome to Saint Andrews Park! 🏡</div>
+      <div style={S.secSub}>Your community hub — everything you need, all in one place.</div>
+
+      <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:16, marginBottom:24}}>
+        {quickLinks.map(l=>(
+          <div key={l.tab} style={{...S.card, marginBottom:0, cursor:"pointer", transition:"all .2s", borderColor:"rgba(201,168,76,.3)"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor="#c9a84c"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(201,168,76,.3)"}
+          >
+            <div style={{fontSize:36, marginBottom:12}}>{l.icon}</div>
+            <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:16, marginBottom:6}}>{l.label}</div>
+            <div style={{color:"#8faa9a", fontSize:13}}>{l.desc}</div>
           </div>
         ))}
       </div>
-    </div>
-  );
-}
 
-// ── TASK TRACKER ──────────────────────────────────────────────────────────────
-function TaskTracker({ tasks, setTasks }) {
-  const [newTask,setNewTask]=useState(""), [pri,setPri]=useState("Medium"), [cat,setCat]=useState("General");
-  const add=()=>{if(!newTask.trim())return;setTasks([...tasks,{id:Date.now(),text:newTask,priority:pri,status:"Todo",category:cat}]);setNewTask("");};
-  const cycle=id=>{const c={Todo:"In Progress","In Progress":"Done",Done:"Todo"};setTasks(tasks.map(t=>t.id===id?{...t,status:c[t.status]}:t));};
-  const remove=id=>setTasks(tasks.filter(t=>t.id!==id));
-  return (
-    <div>
-      <div style={S.secHead}>✅ Task Tracker</div>
-      <div style={S.secSub}>Stay on top of everything the board needs to accomplish.</div>
       <div style={S.card}>
-        <div style={S.cardTitle}>Add New Task</div>
-        <input style={S.input} placeholder="What needs to get done?" value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} />
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <select style={S.select} value={pri} onChange={e=>setPri(e.target.value)}><option>High</option><option>Medium</option><option>Low</option></select>
-          <select style={S.select} value={cat} onChange={e=>setCat(e.target.value)}><option>General</option><option>Website</option><option>Newsletter</option><option>Meeting</option><option>Finance</option><option>Events</option></select>
-          <button style={S.btn} onClick={add}>+ Add Task</button>
+        <div style={S.cardTitle}>📣 Community Announcements</div>
+        <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
+          No announcements at this time. Check back soon! 😊
         </div>
       </div>
+
       <div style={S.card}>
-        <table style={S.table}>
-          <thead><tr><th style={S.th}>Task</th><th style={S.th}>Category</th><th style={S.th}>Priority</th><th style={S.th}>Status</th><th style={S.th}>Actions</th></tr></thead>
-          <tbody>
-            {tasks.map(t=>(
-              <tr key={t.id}>
-                <td style={{...S.td,textDecoration:t.status==="Done"?"line-through":"none",color:t.status==="Done"?"#5a7060":"#e8e0d0"}}>{t.text}</td>
-                <td style={S.td}><span style={S.tag}>{t.category}</span></td>
-                <td style={S.td}><span style={S.pill(priorityColor[t.priority])}>{t.priority}</span></td>
-                <td style={S.td}><span style={S.pill(statusColor[t.status])}>{t.status}</span></td>
-                <td style={S.td}>
-                  <button onClick={()=>cycle(t.id)} style={{...S.btnOut,padding:"4px 10px",fontSize:12,marginRight:6}}>{t.status==="Done"?"↩ Undo":"→ Advance"}</button>
-                  <button onClick={()=>remove(t.id)} style={{background:"transparent",border:"none",color:"#e05c5c",cursor:"pointer",fontSize:16}}>✕</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {tasks.length===0&&<div style={{textAlign:"center",color:"#8faa9a",padding:24}}>No tasks yet — add one above! 🎉</div>}
+        <div style={S.cardTitle}>📅 Upcoming Events</div>
+        <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
+          No upcoming events scheduled. Stay tuned! 🎉
+        </div>
       </div>
     </div>
   );
@@ -522,53 +667,402 @@ function MeetingMinutes() {
   );
 }
 
-// ── WEBSITE TRACKER ────────────────────────────────────────────────────────────
-const WEB_ITEMS_INIT=[
-  {id:1,item:"Replace personal emails with shared HOA email",  priority:"High",  status:"Todo",notes:"Create a shared Gmail or Google Group for social committee and photo submissions."},
-  {id:2,item:"Add Quick-Link icon buttons to home page",        priority:"High",  status:"Todo",notes:"Bylaws, Architecture Form, Calendar, Vendor List, Contact Board"},
-  {id:3,item:"Embed Google Calendar on Events section",         priority:"Medium",status:"Todo",notes:"Embed directly on the page if events are in Google Calendar."},
-  {id:4,item:"Add board member role titles",                    priority:"Medium",status:"Todo",notes:"President, Secretary, Treasurer, etc. on Contact the Board page."},
-  {id:5,item:"Add neighborhood hero photo/banner",              priority:"Low",   status:"Todo",notes:"Use a neighbor-submitted photo for authenticity."},
-  {id:6,item:"Add document descriptions on Forms & Bylaws",     priority:"Low",   status:"Todo",notes:"Short sentence under each document explaining its purpose."},
-  {id:7,item:"Move disclaimer to proper footer",                priority:"Low",   status:"Todo",notes:"Use Google Sites footer so it appears consistently on all pages."},
-  {id:8,item:"Clarify 'Your Neighbors' page — rename it",       priority:"Low",   status:"Todo",notes:"Consider 'Community Directory' or 'Meet Your Neighbors'."},
+// ── CONTRACTORS DATA ──────────────────────────────────────────────────────────
+const CONTRACTOR_CATEGORIES = [
+  { id: "painters",     label: "Painters",          icon: "🎨" },
+  { id: "roofers",      label: "Roofers",            icon: "🏠" },
+  { id: "plumbing",     label: "Plumbing",           icon: "🔧" },
+  { id: "electrical",   label: "Electrical",         icon: "⚡" },
+  { id: "ac_heating",   label: "A/C & Heating",      icon: "❄️" },
+  { id: "realtors",     label: "Realtors",           icon: "🏡" },
+  { id: "landscaping",  label: "Landscaping",        icon: "🌿" },
+  { id: "others",       label: "Others",             icon: "⭐" },
 ];
-function WebsiteTracker() {
-  const [items,setItems]=useState(WEB_ITEMS_INIT);
-  const cycle=id=>{const c={Todo:"In Progress","In Progress":"Done",Done:"Todo"};setItems(items.map(i=>i.id===id?{...i,status:c[i.status]}:i));};
-  const done=items.filter(i=>i.status==="Done").length;
+
+const SAMPLE_CONTRACTORS = [
+  { id: 1, category:"painters",    business:"Atlanta Pro Painters",    contact:"John Smith",   phone:"(404) 555-0201", website:"atlantapropainters.com",  note:"Did our whole exterior — great work!" },
+  { id: 2, category:"roofers",     business:"Saints Roofing Co.",       contact:"Mike Davis",   phone:"(770) 555-0301", website:"saintsroofing.com",        note:"Quick response after storm damage." },
+  { id: 3, category:"plumbing",    business:"Peach State Plumbing",     contact:"Tom Greene",   phone:"(678) 555-0401", website:"peachstateplumbing.com",   note:"Fixed our water heater same day." },
+  { id: 4, category:"ac_heating",  business:"Cool Breeze HVAC",         contact:"Sara Lee",     phone:"(404) 555-0501", website:"coolbreezehvac.com",       note:"Annual maintenance, very reliable." },
+  { id: 5, category:"realtors",    business:"Marietta Home Group",      contact:"Lisa Park",    phone:"(770) 555-0601", website:"mariettahomegroup.com",    note:"Helped 3 families on our street!" },
+  { id: 6, category:"landscaping", business:"Green Thumb Landscaping",  contact:"Carlos Ruiz",  phone:"(678) 555-0701", website:"greenthumbga.com",         note:"Weekly lawn care, very professional." },
+];
+
+// ── CONTRACTORS TAB ────────────────────────────────────────────────────────────
+function Contractors() {
+  const [contractors, setContractors] = useState(SAMPLE_CONTRACTORS);
+  const [loading, setLoading]         = useState(false);
+  const [sheetError, setSheetError]   = useState(null);
+  const [usingSheets, setUsingSheets] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState("");
+  const [newC, setNewC] = useState({ category:"painters", business:"", contact:"", phone:"", website:"", note:"" });
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const loadContractors = () => {
+    setLoading(true); setSheetError(null); setUsingSheets(true);
+    fetchContractors()
+      .then(d => {
+        if (d.length > 0) setContractors(d);
+        setLoading(false);
+      })
+      .catch(e => {
+        setUsingSheets(false);
+        setSheetError(e.message);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => { loadContractors(); }, []);
+
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState(null);
+
+  const addContractor = async () => {
+    if (!newC.business.trim()) return;
+    // Optimistic UI update
+    const tempId = Date.now();
+    setContractors(prev => [...prev, { ...newC, id: tempId }]);
+    setNewC({ category:"painters", business:"", contact:"", phone:"", website:"", note:"" });
+    setShowAdd(false);
+    setSaving(true); setSaveMsg(null);
+
+    if (CONTRACTORS_SCRIPT_URL === "YOUR_APPS_SCRIPT_URL_HERE") {
+      setSaving(false);
+      setSaveMsg({ type:"warn", text:"⚠️ Apps Script not connected — entry visible this session only." });
+      return;
+    }
+
+    try {
+      const res  = await fetch(CONTRACTORS_SCRIPT_URL, {
+        method: "POST",
+        body:   JSON.stringify({ action:"add", ...newC }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSaveMsg({ type:"ok", text:"✅ Contractor saved to Google Sheets!" });
+        // Reload from sheet to get clean server data
+        setTimeout(() => loadContractors(), 1500);
+      } else {
+        setSaveMsg({ type:"err", text:"❌ Could not save to Sheet: " + json.error });
+      }
+    } catch {
+      setSaveMsg({ type:"err", text:"❌ Network error — entry visible this session only." });
+    }
+    setSaving(false);
+    setTimeout(() => setSaveMsg(null), 5000);
+  };
+
+  const removeContractor = async (id) => {
+    const target = contractors.find(c => c.id === id);
+    // Optimistic UI update
+    setContractors(prev => prev.filter(c => c.id !== id));
+    setConfirmDelete(null);
+
+    if (!target || CONTRACTORS_SCRIPT_URL === "YOUR_APPS_SCRIPT_URL_HERE") return;
+
+    try {
+      await fetch(CONTRACTORS_SCRIPT_URL, {
+        method: "POST",
+        body:   JSON.stringify({ action:"delete", business: target.business, category: target.category }),
+      });
+      // Reload to sync with sheet
+      setTimeout(() => loadContractors(), 1500);
+    } catch {
+      // Silent fail — sheet will still have the row, reload will restore it
+      loadContractors();
+    }
+  };
+
+  const filtered = contractors.filter(c => {
+    const matchCat = activeCategory === "all" || c.category === activeCategory;
+    const matchSearch = [c.business, c.contact, c.phone, c.note].some(f =>
+      f.toLowerCase().includes(search.toLowerCase())
+    );
+    return matchCat && matchSearch;
+  });
+
+  const catColors = {
+    painters:    "#5b8dee",
+    roofers:     "#e09a3a",
+    plumbing:    "#3ab8c9",
+    electrical:  "#f5c542",
+    ac_heating:  "#7c5be0",
+    realtors:    "#c9a84c",
+    landscaping: "#4caf87",
+    others:      "#8b9db5",
+  };
+
   return (
     <div>
-      <div style={S.secHead}>🌐 Website Enhancement Tracker</div>
-      <div style={S.secSub}>Track all UI/UX improvements for the Saint Andrews Park Google Site.</div>
-      <div style={{...S.card,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div>
-          <div style={{fontSize:13,color:"#8faa9a",marginBottom:6}}>Overall Progress</div>
-          <div style={{fontSize:22,color:"#c9a84c",fontWeight:"bold"}}>{done} / {items.length} Complete</div>
+      <div style={S.secHead}>🔨 Contractor Directory</div>
+      <div style={S.secSub}>
+        {usingSheets ? "✅ Live data synced from Google Sheets." : sheetError === "NETWORK_BLOCKED" ? "👁 Preview mode — showing sample data. Live data loads on GitHub Pages." : "📋 Sample data shown."}
+        {" "}<strong style={{color:"#c9a84c"}}>{contractors.length}</strong> contractors listed.
+      </div>
+      {sheetError && sheetError !== "NETWORK_BLOCKED" && (
+        <div style={{ ...S.card, border:"1px solid rgba(224,92,92,.3)", background:"rgba(224,92,92,.07)", marginBottom:16 }}>
+          <div style={{color:"#e05c5c", fontWeight:"bold", marginBottom:6}}>⚠️ Could Not Connect to Google Sheets</div>
+          <div style={{color:"#8faa9a", fontSize:13, marginBottom:10}}>
+            {sheetError === "API_KEY_ERROR" ? "API key rejected — check Google Cloud Console restrictions."
+            : sheetError === "SHEET_NOT_FOUND" ? "Sheet not found — make sure it is shared as 'Anyone with the link can view'."
+            : "Unable to reach Google Sheets. Showing sample data."}
+          </div>
+          <button style={{...S.btnSm}} onClick={loadContractors}>↻ Retry</button>
         </div>
-        <div style={{flex:1,margin:"0 24px"}}>
-          <div style={{background:"rgba(255,255,255,.1)",borderRadius:10,height:12,overflow:"hidden"}}>
-            <div style={{width:`${(done/items.length)*100}%`,background:"linear-gradient(90deg,#c9a84c,#4caf87)",height:"100%",borderRadius:10,transition:"width .4s ease"}} />
+      )}
+
+      {saveMsg && (
+        <div style={{
+          ...S.card, marginBottom:16,
+          background: saveMsg.type==="ok"   ? "rgba(76,175,135,.1)"  :
+                      saveMsg.type==="warn" ? "rgba(224,154,58,.1)"  : "rgba(224,92,92,.1)",
+          border:     saveMsg.type==="ok"   ? "1px solid rgba(76,175,135,.4)"  :
+                      saveMsg.type==="warn" ? "1px solid rgba(224,154,58,.4)"  : "1px solid rgba(224,92,92,.4)",
+          color:      saveMsg.type==="ok"   ? "#4caf87" :
+                      saveMsg.type==="warn" ? "#e09a3a" : "#e05c5c",
+          fontSize:13, fontWeight:"bold",
+        }}>
+          {saveMsg.text}
+        </div>
+      )}
+      {loading && <div style={{textAlign:"center",color:"#8faa9a",padding:40}}>⏳ Loading contractors from Google Sheets...</div>}
+
+      {/* Category filter pills */}
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20 }}>
+        <button
+          onClick={() => setActiveCategory("all")}
+          style={{
+            padding:"8px 16px", borderRadius:20, cursor:"pointer",
+            fontFamily:"Georgia,serif", fontSize:13,
+            background: activeCategory==="all" ? "linear-gradient(135deg,#c9a84c,#e8cc80)" : "rgba(255,255,255,.06)",
+            color: activeCategory==="all" ? "#1a2332" : "#8faa9a",
+            border: activeCategory==="all" ? "none" : "1px solid rgba(201,168,76,.2)",
+            fontWeight: activeCategory==="all" ? "bold" : "normal",
+          }}
+        >
+          All ({contractors.length})
+        </button>
+        {CONTRACTOR_CATEGORIES.map(cat => {
+          const count = contractors.filter(c => c.category === cat.id).length;
+          const active = activeCategory === cat.id;
+          return (
+            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} style={{
+              padding:"8px 16px", borderRadius:20, cursor:"pointer",
+              fontFamily:"Georgia,serif", fontSize:13,
+              background: active ? `${catColors[cat.id]}33` : "rgba(255,255,255,.06)",
+              color: active ? catColors[cat.id] : "#8faa9a",
+              border: active ? `1px solid ${catColors[cat.id]}66` : "1px solid rgba(201,168,76,.2)",
+              fontWeight: active ? "bold" : "normal",
+            }}>
+              {cat.icon} {cat.label} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search + Add button */}
+      <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
+        <input
+          style={{ ...S.input, flex:1, minWidth:200, marginBottom:0 }}
+          placeholder="🔍 Search contractors..."
+          value={search} onChange={e => setSearch(e.target.value)}
+        />
+        <button style={S.btn} onClick={() => setShowAdd(!showAdd)}>
+          {showAdd ? "✕ Cancel" : "+ Add Contractor"}
+        </button>
+      </div>
+
+      {/* Add Contractor Form */}
+      {showAdd && (
+        <div style={{ ...S.card, border:"1px solid rgba(201,168,76,.4)" }}>
+          <div style={S.cardTitle}>➕ Add a Contractor</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div style={{ gridColumn:"1/-1" }}>
+              <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Category</div>
+              <select
+                style={{ ...S.select, width:"100%", marginRight:0 }}
+                value={newC.category}
+                onChange={e => setNewC({...newC, category:e.target.value})}
+              >
+                {CONTRACTOR_CATEGORIES.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
+                ))}
+              </select>
+            </div>
+            {[
+              { label:"Business Name *", field:"business", ph:"e.g. Atlanta Pro Painters" },
+              { label:"Contact Person",  field:"contact",  ph:"e.g. John Smith" },
+              { label:"Phone Number",    field:"phone",    ph:"e.g. (404) 555-0100" },
+              { label:"Website",         field:"website",  ph:"e.g. example.com" },
+            ].map(({label, field, ph}) => (
+              <div key={field}>
+                <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>{label}</div>
+                <input
+                  style={{ ...S.input, marginBottom:0 }}
+                  placeholder={ph}
+                  value={newC[field]}
+                  onChange={e => setNewC({...newC, [field]:e.target.value})}
+                />
+              </div>
+            ))}
+            <div style={{ gridColumn:"1/-1" }}>
+              <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Neighbor Recommendation / Note</div>
+              <input
+                style={{ ...S.input, marginBottom:0 }}
+                placeholder="e.g. Repainted our fence — great price and quality!"
+                value={newC.note}
+                onChange={e => setNewC({...newC, note:e.target.value})}
+              />
+            </div>
+          </div>
+          <div style={{ marginTop:16 }}>
+            <button style={S.btn} onClick={addContractor}>💾 Save Contractor</button>
+            <button style={S.btnOut} onClick={() => setShowAdd(false)}>Cancel</button>
           </div>
         </div>
-        <div style={{color:"#4caf87",fontSize:18,fontWeight:"bold"}}>{Math.round((done/items.length)*100)}%</div>
-      </div>
-      <div style={S.card}>
-        <table style={S.table}>
-          <thead><tr><th style={S.th}>Enhancement</th><th style={S.th}>Priority</th><th style={S.th}>Status</th><th style={S.th}>Notes</th><th style={S.th}>Action</th></tr></thead>
-          <tbody>
-            {items.map(i=>(
-              <tr key={i.id}>
-                <td style={{...S.td,textDecoration:i.status==="Done"?"line-through":"none",color:i.status==="Done"?"#5a7060":"#e8e0d0",maxWidth:220}}>{i.item}</td>
-                <td style={S.td}><span style={S.pill(priorityColor[i.priority])}>{i.priority}</span></td>
-                <td style={S.td}><span style={S.pill(statusColor[i.status])}>{i.status}</span></td>
-                <td style={{...S.td,color:"#8faa9a",fontSize:12,maxWidth:240}}>{i.notes}</td>
-                <td style={S.td}><button onClick={()=>cycle(i.id)} style={{...S.btnOut,padding:"4px 10px",fontSize:12}}>{i.status==="Done"?"↩ Undo":"→ Advance"}</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
+
+      {/* Contractor Cards grouped by category */}
+      {activeCategory === "all" ? (
+        CONTRACTOR_CATEGORIES.map(cat => {
+          const catItems = filtered.filter(c => c.category === cat.id);
+          if (catItems.length === 0) return null;
+          return (
+            <div key={cat.id} style={{ marginBottom:32 }}>
+              <div style={{
+                display:"flex", alignItems:"center", gap:10,
+                marginBottom:14, paddingBottom:8,
+                borderBottom:`2px solid ${catColors[cat.id]}44`,
+              }}>
+                <span style={{ fontSize:22 }}>{cat.icon}</span>
+                <span style={{ color: catColors[cat.id], fontWeight:"bold", fontSize:18 }}>{cat.label}</span>
+                <span style={{ ...S.pill(catColors[cat.id]), marginLeft:4 }}>{catItems.length}</span>
+              </div>
+              <ContractorGrid items={catItems} catColor={catColors[cat.id]} onDelete={setConfirmDelete} />
+            </div>
+          );
+        })
+      ) : (
+        <div>
+          {(() => {
+            const cat = CONTRACTOR_CATEGORIES.find(c => c.id === activeCategory);
+            return (
+              <div style={{
+                display:"flex", alignItems:"center", gap:10,
+                marginBottom:14, paddingBottom:8,
+                borderBottom:`2px solid ${catColors[activeCategory]}44`,
+              }}>
+                <span style={{ fontSize:22 }}>{cat.icon}</span>
+                <span style={{ color: catColors[activeCategory], fontWeight:"bold", fontSize:18 }}>{cat.label}</span>
+                <span style={{ ...S.pill(catColors[activeCategory]), marginLeft:4 }}>{filtered.length}</span>
+              </div>
+            );
+          })()}
+          <ContractorGrid items={filtered} catColor={catColors[activeCategory]} onDelete={setConfirmDelete} />
+        </div>
+      )}
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign:"center", color:"#8faa9a", padding:40 }}>
+          No contractors found. Be the first to add one! 🔨
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div style={{
+          position:"fixed", top:0, left:0, right:0, bottom:0,
+          background:"rgba(0,0,0,.6)", display:"flex",
+          alignItems:"center", justifyContent:"center", zIndex:1000,
+        }}>
+          <div style={{ ...S.card, maxWidth:360, textAlign:"center" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>🗑</div>
+            <div style={{ color:"#e8e0d0", fontWeight:"bold", marginBottom:8 }}>Remove this contractor?</div>
+            <div style={{ color:"#8faa9a", fontSize:13, marginBottom:20 }}>
+              This will remove them from the community list.
+            </div>
+            <button style={{ ...S.btn, marginRight:8 }} onClick={() => removeContractor(confirmDelete)}>Yes, Remove</button>
+            <button style={S.btnOut} onClick={() => setConfirmDelete(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContractorGrid({ items, catColor, onDelete }) {
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
+      {items.map(c => (
+        <div key={c.id} style={{
+          background:"rgba(255,255,255,.05)",
+          border:`1px solid ${catColor}22`,
+          borderRadius:12, padding:20,
+          transition:"all .2s",
+          position:"relative",
+        }}>
+          {/* Category color bar */}
+          <div style={{
+            position:"absolute", top:0, left:0, right:0, height:3,
+            background:`linear-gradient(90deg,${catColor},${catColor}44)`,
+            borderRadius:"12px 12px 0 0",
+          }} />
+
+          <div style={{ fontWeight:"bold", fontSize:16, color:"#e8e0d0", marginBottom:10, marginTop:4 }}>
+            {c.business}
+          </div>
+
+          {c.contact && (
+            <div style={{ ...S.infoRow, marginBottom:6 }}>
+              <span style={{ ...S.infoIcon, color: catColor }}>👤</span>
+              <span style={{ color:"#8faa9a", fontSize:13 }}>{c.contact}</span>
+            </div>
+          )}
+          {c.phone && (
+            <div style={{ ...S.infoRow, marginBottom:6 }}>
+              <span style={{ ...S.infoIcon, color: catColor }}>📞</span>
+              <a href={`tel:${c.phone}`} style={{ color:"#5b8dee", fontSize:13, textDecoration:"none" }}>{c.phone}</a>
+            </div>
+          )}
+          {c.website && (
+            <div style={{ ...S.infoRow, marginBottom:6 }}>
+              <span style={{ ...S.infoIcon, color: catColor }}>🌐</span>
+              <a href={`https://${c.website.replace(/^https?:\/\//, "")}`} target="_blank" rel="noreferrer"
+                style={{ color:"#5b8dee", fontSize:13, textDecoration:"none", wordBreak:"break-all" }}>
+                {c.website}
+              </a>
+            </div>
+          )}
+          {c.note && (
+            <div style={{
+              marginTop:12, padding:"10px 12px",
+              background:`${catColor}11`,
+              border:`1px solid ${catColor}22`,
+              borderRadius:8, fontSize:12,
+              color:"#ccc5b5", lineHeight:1.6,
+              fontStyle:"italic",
+            }}>
+              💬 "{c.note}"
+            </div>
+          )}
+
+          <button
+            onClick={() => onDelete(c.id)}
+            style={{
+              position:"absolute", top:12, right:12,
+              background:"transparent", border:"none",
+              color:"rgba(224,92,92,.4)", cursor:"pointer",
+              fontSize:16, lineHeight:1,
+              transition:"color .2s",
+            }}
+            onMouseEnter={e => e.target.style.color="#e05c5c"}
+            onMouseLeave={e => e.target.style.color="rgba(224,92,92,.4)"}
+            title="Remove contractor"
+          >✕</button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -576,24 +1070,23 @@ function WebsiteTracker() {
 // ── ROOT ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab,setTab]=useState("dashboard");
-  const [tasks,setTasks]=useState(initialTasks);
+
   const render=()=>{switch(tab){
-    case"dashboard":  return <Dashboard tasks={tasks}/>;
-    case"directory":  return <NeighborhoodDirectory/>;
-    case"tasks":      return <TaskTracker tasks={tasks} setTasks={setTasks}/>;
-    case"newsletter": return <Newsletter/>;
-    case"minutes":    return <MeetingMinutes/>;
-    case"website":    return <WebsiteTracker/>;
-    default:          return null;
+    case"dashboard":   return <Dashboard/>;
+    case"directory":   return <NeighborhoodDirectory/>;
+    case"contractors": return <Contractors/>;
+    case"newsletter":  return <Newsletter/>;
+    case"minutes":     return <MeetingMinutes/>;
+    default:           return null;
   }};
   return (
     <div style={S.app}>
       <div style={S.header}>
         <div style={{display:"flex",alignItems:"center",gap:14}}>
           <div style={S.logoIcon}>⛳</div>
-          <div><div style={S.logoTitle}>Saint Andrews Park</div><div style={S.logoSub}>HOA Board Hub</div></div>
+          <div><div style={{...S.logoTitle, fontSize:26}}>Saint Andrews Park</div></div>
         </div>
-        <div style={S.badge}>SECRETARY PORTAL</div>
+        <div style={S.badge}>COMMUNITY PORTAL</div>
       </div>
       <div style={S.nav}>
         {TABS.map(t=><button key={t.id} style={S.navBtn(tab===t.id)} onClick={()=>setTab(t.id)}>{t.label}</button>)}

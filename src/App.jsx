@@ -12,6 +12,8 @@ const CONTRACTORS_SHEET_CONFIG = {
   spreadsheetId: "1SIKmPyv8UnHPiv8Tc_0cxOMMFg-sWjM_",
   range: "Contractors!A2:F",
 };
+// Paste your Apps Script Web App URL here after deploying the script
+const CONTRACTORS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_kQPd_v2GAtGbTSP1LLOpxmTM_eKSkPjDkJb4UpCmNLZovqlRk7xY-ed898h-01LP/exec";
 const BOARD_PASSWORD = "SAP2026"; // change before deploying!
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
@@ -714,16 +716,63 @@ function Contractors() {
 
   useEffect(() => { loadContractors(); }, []);
 
-  const addContractor = () => {
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState(null);
+
+  const addContractor = async () => {
     if (!newC.business.trim()) return;
-    setContractors([...contractors, { ...newC, id: Date.now() }]);
+    // Optimistic UI update
+    const tempId = Date.now();
+    setContractors(prev => [...prev, { ...newC, id: tempId }]);
     setNewC({ category:"painters", business:"", contact:"", phone:"", website:"", note:"" });
     setShowAdd(false);
+    setSaving(true); setSaveMsg(null);
+
+    if (CONTRACTORS_SCRIPT_URL === "YOUR_APPS_SCRIPT_URL_HERE") {
+      setSaving(false);
+      setSaveMsg({ type:"warn", text:"⚠️ Apps Script not connected — entry visible this session only." });
+      return;
+    }
+
+    try {
+      const res  = await fetch(CONTRACTORS_SCRIPT_URL, {
+        method: "POST",
+        body:   JSON.stringify({ action:"add", ...newC }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSaveMsg({ type:"ok", text:"✅ Contractor saved to Google Sheets!" });
+        // Reload from sheet to get clean server data
+        setTimeout(() => loadContractors(), 1500);
+      } else {
+        setSaveMsg({ type:"err", text:"❌ Could not save to Sheet: " + json.error });
+      }
+    } catch {
+      setSaveMsg({ type:"err", text:"❌ Network error — entry visible this session only." });
+    }
+    setSaving(false);
+    setTimeout(() => setSaveMsg(null), 5000);
   };
 
-  const removeContractor = (id) => {
-    setContractors(contractors.filter(c => c.id !== id));
+  const removeContractor = async (id) => {
+    const target = contractors.find(c => c.id === id);
+    // Optimistic UI update
+    setContractors(prev => prev.filter(c => c.id !== id));
     setConfirmDelete(null);
+
+    if (!target || CONTRACTORS_SCRIPT_URL === "YOUR_APPS_SCRIPT_URL_HERE") return;
+
+    try {
+      await fetch(CONTRACTORS_SCRIPT_URL, {
+        method: "POST",
+        body:   JSON.stringify({ action:"delete", business: target.business, category: target.category }),
+      });
+      // Reload to sync with sheet
+      setTimeout(() => loadContractors(), 1500);
+    } catch {
+      // Silent fail — sheet will still have the row, reload will restore it
+      loadContractors();
+    }
   };
 
   const filtered = contractors.filter(c => {
@@ -764,6 +813,20 @@ function Contractors() {
         </div>
       )}
 
+      {saveMsg && (
+        <div style={{
+          ...S.card, marginBottom:16,
+          background: saveMsg.type==="ok"   ? "rgba(76,175,135,.1)"  :
+                      saveMsg.type==="warn" ? "rgba(224,154,58,.1)"  : "rgba(224,92,92,.1)",
+          border:     saveMsg.type==="ok"   ? "1px solid rgba(76,175,135,.4)"  :
+                      saveMsg.type==="warn" ? "1px solid rgba(224,154,58,.4)"  : "1px solid rgba(224,92,92,.4)",
+          color:      saveMsg.type==="ok"   ? "#4caf87" :
+                      saveMsg.type==="warn" ? "#e09a3a" : "#e05c5c",
+          fontSize:13, fontWeight:"bold",
+        }}>
+          {saveMsg.text}
+        </div>
+      )}
       {loading && <div style={{textAlign:"center",color:"#8faa9a",padding:40}}>⏳ Loading contractors from Google Sheets...</div>}
 
       {/* Category filter pills */}
