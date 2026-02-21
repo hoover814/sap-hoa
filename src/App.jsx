@@ -9,11 +9,11 @@ const GOOGLE_SHEETS_CONFIG = {
 
 const CONTRACTORS_SHEET_CONFIG = {
   apiKey: "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
-  spreadsheetId: "1SIKmPyv8UnHPiv8Tc_0cxOMMFg-sWjM_",
+  spreadsheetId: "1IxhTXHK4ys6xiciBwvbBBeu-DFtD_1OCpuw1-d-QRYQ",
   range: "Contractors!A2:F",
 };
 // Paste your Apps Script Web App URL here after deploying the script
-const CONTRACTORS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+const CONTRACTORS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1yzQZkdC_KplEPzHEMvRL9GesSTOdqC9Nv_TqNA3n98M1O5G2E02col6KKTj-fju50g/exec";
 const BOARD_PASSWORD = "SAP2026"; // change before deploying!
 
 const BOARD_CONTENT_CONFIG = {
