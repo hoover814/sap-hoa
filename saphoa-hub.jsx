@@ -13,8 +13,17 @@ const CONTRACTORS_SHEET_CONFIG = {
   range: "Contractors!A2:F",
 };
 // Paste your Apps Script Web App URL here after deploying the script
-const CONTRACTORS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_kQPd_v2GAtGbTSP1LLOpxmTM_eKSkPjDkJb4UpCmNLZovqlRk7xY-ed898h-01LP/exec";
+const CONTRACTORS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
 const BOARD_PASSWORD = "SAP2026"; // change before deploying!
+
+const BOARD_CONTENT_CONFIG = {
+  apiKey:        "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
+  spreadsheetId: "1EMVVAN2rcgbYsbKo7BI2V4bHgn5NHHQREv3PbEa8e1w",
+  announcementsRange: "Announcements!A2:D",
+  eventsRange:        "Events!A2:F",
+};
+// Paste your Board Content Apps Script URL here after deploying
+const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPQAMnBZXOrQRHV_AOUZsQzkE_O-DVRqub73QFj4xFOw0cEV5V9_J9ffGjDHgEWkMq/exec";
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
 const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
@@ -48,6 +57,7 @@ const TABS = [
   { id: "contractors", label: "🔨 Contractors" },
   { id: "newsletter",  label: "📰 Newsletter" },
   { id: "minutes",     label: "📋 Meeting Minutes" },
+  { id: "board",       label: "🔒 Board" },
 ];
 
 
@@ -132,6 +142,17 @@ async function fetchContractors() {
     website:   row[4]||"",
     note:      row[5]||"",
   }));
+}
+
+async function fetchBoardContent(range) {
+  const { apiKey, spreadsheetId } = BOARD_CONTENT_CONFIG;
+  if (spreadsheetId === "YOUR_BOARD_CONTENT_SHEET_ID") throw new Error("NOT_CONFIGURED");
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?key=${apiKey}`;
+  let res;
+  try { res = await fetch(url); } catch { throw new Error("NETWORK_BLOCKED"); }
+  if (!res.ok) throw new Error("SHEETS_ERROR");
+  const data = await res.json();
+  return data.values || [];
 }
 
 // ── LEAFLET LOADER ────────────────────────────────────────────────────────────
@@ -540,7 +561,24 @@ const GOOGLE_SHEETS_CONFIG = {
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────────────
-function Dashboard() {
+function Dashboard({ onNavigate }) {
+  const [announcements, setAnnouncements] = useState([]);
+  const [events, setEvents]               = useState([]);
+
+  useEffect(() => {
+    fetchBoardContent(BOARD_CONTENT_CONFIG.announcementsRange)
+      .then(rows => setAnnouncements(rows.map((r,i) => ({
+        id:i, title:r[0]||"", message:r[1]||"", date:r[2]||"", status:r[3]||"Active"
+      })).filter(a => a.status === "Active")))
+      .catch(() => {});
+
+    fetchBoardContent(BOARD_CONTENT_CONFIG.eventsRange)
+      .then(rows => setEvents(rows.map((r,i) => ({
+        id:i, title:r[0]||"", description:r[1]||"", date:r[2]||"", time:r[3]||"", location:r[4]||"", status:r[5]||"Active"
+      })).filter(e => e.status === "Active")))
+      .catch(() => {});
+  }, []);
+
   const quickLinks = [
     { icon:"👥", label:"Neighborhood Directory", desc:"Find your neighbors' contact info", tab:"directory" },
     { icon:"📰", label:"Newsletter",             desc:"Read the latest community newsletter", tab:"newsletter" },
@@ -552,31 +590,64 @@ function Dashboard() {
       <div style={S.secHead}>Welcome to Saint Andrews Park! 🏡</div>
       <div style={S.secSub}>Your community hub — everything you need, all in one place.</div>
 
+      {/* Announcements — TOP */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>📣 Community Announcements</div>
+        {announcements.length === 0 ? (
+          <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
+            No announcements at this time. Check back soon! 😊
+          </div>
+        ) : announcements.map(a => (
+          <div key={a.id} style={{padding:"14px 0", borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+              <div style={{color:"#e8e0d0", fontWeight:"bold", fontSize:15}}>{a.title}</div>
+              {a.date && <div style={{color:"#8faa9a", fontSize:12}}>{a.date}</div>}
+            </div>
+            <div style={{color:"#ccc5b5", fontSize:13, lineHeight:1.7}}>{a.message}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Events — SECOND */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>📅 Upcoming Events</div>
+        {events.length === 0 ? (
+          <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
+            No upcoming events scheduled. Stay tuned! 🎉
+          </div>
+        ) : events.map(e => (
+          <div key={e.id} style={{
+            padding:"14px 16px", borderRadius:10, marginBottom:10,
+            background:"rgba(201,168,76,.06)", border:"1px solid rgba(201,168,76,.2)",
+          }}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8}}>
+              <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:15}}>{e.title}</div>
+              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>📅 {e.date}</span>}
+                {e.time && <span style={{...S.pill("#4caf87"), fontSize:11}}>🕐 {e.time}</span>}
+              </div>
+            </div>
+            {e.location && <div style={{color:"#8faa9a", fontSize:12, marginTop:4}}>📍 {e.location}</div>}
+            {e.description && <div style={{color:"#ccc5b5", fontSize:13, marginTop:8, lineHeight:1.7}}>{e.description}</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* Quick Links — BELOW */}
       <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:16, marginBottom:24}}>
         {quickLinks.map(l=>(
-          <div key={l.tab} style={{...S.card, marginBottom:0, cursor:"pointer", transition:"all .2s", borderColor:"rgba(201,168,76,.3)"}}
+          <div key={l.tab}
+            onClick={() => onNavigate(l.tab)}
+            style={{...S.card, marginBottom:0, cursor:"pointer", transition:"all .2s", borderColor:"rgba(201,168,76,.3)"}}
             onMouseEnter={e=>e.currentTarget.style.borderColor="#c9a84c"}
             onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(201,168,76,.3)"}
           >
             <div style={{fontSize:36, marginBottom:12}}>{l.icon}</div>
             <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:16, marginBottom:6}}>{l.label}</div>
             <div style={{color:"#8faa9a", fontSize:13}}>{l.desc}</div>
+            <div style={{marginTop:12, color:"#c9a84c", fontSize:12, fontWeight:"bold"}}>View →</div>
           </div>
         ))}
-      </div>
-
-      <div style={S.card}>
-        <div style={S.cardTitle}>📣 Community Announcements</div>
-        <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
-          No announcements at this time. Check back soon! 😊
-        </div>
-      </div>
-
-      <div style={S.card}>
-        <div style={S.cardTitle}>📅 Upcoming Events</div>
-        <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
-          No upcoming events scheduled. Stay tuned! 🎉
-        </div>
       </div>
     </div>
   );
@@ -584,83 +655,32 @@ function Dashboard() {
 
 // ── NEWSLETTER ─────────────────────────────────────────────────────────────────
 function Newsletter() {
-  const [quarter,setQuarter]=useState("Q1 2025");
-  const [secs,setSecs]=useState([
-    {id:1,title:"Message from the Board",content:""},
-    {id:2,title:"Upcoming Events",content:""},
-    {id:3,title:"Community Updates",content:""},
-    {id:4,title:"Reminders & Announcements",content:""},
-  ]);
-  const upd=(id,f,v)=>setSecs(secs.map(s=>s.id===id?{...s,[f]:v}:s));
   return (
     <div>
-      <div style={S.secHead}>📰 Quarterly Newsletter Builder</div>
-      <div style={S.secSub}>Draft and organize your community newsletter, section by section.</div>
-      <div style={S.card}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <span style={{color:"#c9a84c",fontSize:14}}>Quarter / Edition:</span>
-          <input style={{...S.input,width:180,marginBottom:0}} value={quarter} onChange={e=>setQuarter(e.target.value)} />
+      <div style={S.secHead}>📰 Newsletter</div>
+      <div style={S.secSub}>Stay tuned for updates from your Saint Andrews Park board!</div>
+      <div style={{...S.card, textAlign:"center", padding:"60px 20px"}}>
+        <div style={{fontSize:64, marginBottom:20}}>📰</div>
+        <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:24, marginBottom:12}}>Coming Soon!</div>
+        <div style={{color:"#8faa9a", fontSize:15, lineHeight:1.8, maxWidth:400, margin:"0 auto"}}>
+          The Saint Andrews Park community newsletter is on its way. Check back soon for the latest news, updates, and highlights from your neighborhood! 🏡
         </div>
-      </div>
-      {secs.map(s=>(
-        <div key={s.id} style={S.card}>
-          <input style={{...S.input,fontSize:16,fontWeight:"bold",color:"#c9a84c",background:"transparent",border:"none",borderBottom:"1px solid rgba(201,168,76,.3)",borderRadius:0,paddingLeft:0}}
-            value={s.title} onChange={e=>upd(s.id,"title",e.target.value)} />
-          <textarea style={S.textarea} placeholder={`Write the "${s.title}" content here...`}
-            value={s.content} onChange={e=>upd(s.id,"content",e.target.value)} />
-        </div>
-      ))}
-      <button style={S.btn} onClick={()=>setSecs([...secs,{id:Date.now(),title:"New Section",content:""}])}>+ Add Section</button>
-      <div style={{...S.card,marginTop:24}}>
-        <div style={S.cardTitle}>📄 Newsletter Preview — {quarter}</div>
-        {secs.map(s=>s.content?(<div key={s.id} style={{marginBottom:20}}><div style={{color:"#c9a84c",fontWeight:"bold",marginBottom:6,fontSize:16}}>{s.title}</div><div style={{color:"#ccc5b5",fontSize:14,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{s.content}</div></div>):null)}
-        {secs.every(s=>!s.content)&&<div style={{color:"#8faa9a",textAlign:"center"}}>Fill in sections above to see your newsletter preview here.</div>}
       </div>
     </div>
   );
 }
 
 // ── MEETING MINUTES ────────────────────────────────────────────────────────────
-const blankMins=()=>({id:Date.now(),date:"",attendees:"",agenda:"",decisions:"",actionItems:"",nextMeeting:""});
 function MeetingMinutes() {
-  const [mins,setMins]=useState([blankMins()]);
-  const [activeId,setActiveId]=useState(mins[0].id);
-  const active=mins.find(m=>m.id===activeId);
-  const upd=(f,v)=>setMins(mins.map(m=>m.id===activeId?{...m,[f]:v}:m));
-  const addNew=()=>{const m=blankMins();setMins([m,...mins]);setActiveId(m.id);};
-  const fields=[
-    {label:"📅 Meeting Date",  f:"date",       ph:"e.g. March 15, 2025"},
-    {label:"👥 Attendees",     f:"attendees",  ph:"List board members and residents present"},
-    {label:"📌 Agenda Items",  f:"agenda",     ph:"Topics discussed..."},
-    {label:"✅ Decisions Made",f:"decisions",  ph:"Key decisions approved or voted on..."},
-    {label:"📝 Action Items",  f:"actionItems",ph:"Who is responsible for what..."},
-    {label:"📅 Next Meeting",  f:"nextMeeting",ph:"Date of next meeting..."},
-  ];
   return (
     <div>
       <div style={S.secHead}>📋 Meeting Minutes</div>
-      <div style={S.secSub}>Record and reference all HOA board meeting minutes in one place.</div>
-      <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
-        <div style={{minWidth:200}}>
-          <button style={{...S.btn,width:"100%",marginBottom:12}} onClick={addNew}>+ New Meeting</button>
-          {mins.map(m=>(
-            <div key={m.id} onClick={()=>setActiveId(m.id)} style={{padding:"12px 16px",borderRadius:8,cursor:"pointer",marginBottom:6,background:m.id===activeId?"rgba(201,168,76,.15)":"rgba(255,255,255,.04)",border:m.id===activeId?"1px solid rgba(201,168,76,.4)":"1px solid transparent",color:m.id===activeId?"#c9a84c":"#8faa9a",fontSize:13}}>
-              {m.date||"Untitled Meeting"}
-            </div>
-          ))}
-        </div>
-        <div style={{flex:1,minWidth:300}}>
-          {active&&(
-            <div style={S.card}>
-              <div style={S.cardTitle}>Meeting Details</div>
-              {fields.map(({label,f,ph})=>(
-                <div key={f} style={{marginBottom:16}}>
-                  <div style={{color:"#c9a84c",fontSize:13,marginBottom:6,fontWeight:"bold"}}>{label}</div>
-                  <textarea style={{...S.textarea,minHeight:70,marginBottom:0}} placeholder={ph} value={active[f]} onChange={e=>upd(f,e.target.value)} />
-                </div>
-              ))}
-            </div>
-          )}
+      <div style={S.secSub}>Board meeting records for Saint Andrews Park homeowners.</div>
+      <div style={{...S.card, textAlign:"center", padding:"60px 20px"}}>
+        <div style={{fontSize:64, marginBottom:20}}>📋</div>
+        <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:24, marginBottom:12}}>Coming Soon!</div>
+        <div style={{color:"#8faa9a", fontSize:15, lineHeight:1.8, maxWidth:400, margin:"0 auto"}}>
+          Meeting minutes will be posted here after each board meeting. Stay engaged with what's happening in your community! 🏡
         </div>
       </div>
     </div>
@@ -1048,21 +1068,309 @@ function ContractorGrid({ items, catColor, onDelete }) {
             </div>
           )}
 
-          <button
-            onClick={() => onDelete(c.id)}
-            style={{
-              position:"absolute", top:12, right:12,
-              background:"transparent", border:"none",
-              color:"rgba(224,92,92,.4)", cursor:"pointer",
-              fontSize:16, lineHeight:1,
-              transition:"color .2s",
-            }}
-            onMouseEnter={e => e.target.style.color="#e05c5c"}
-            onMouseLeave={e => e.target.style.color="rgba(224,92,92,.4)"}
-            title="Remove contractor"
-          >✕</button>
+
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── BOARD TAB ──────────────────────────────────────────────────────────────────
+function BoardTab() {
+  const [unlocked, setUnlocked]   = useState(false);
+  const [pwInput, setPwInput]     = useState("");
+  const [pwError, setPwError]     = useState(false);
+  const [activeSection, setActiveSection] = useState("announcements");
+
+  // Announcements state
+  const [announcements, setAnnouncements] = useState([]);
+  const [newAnn, setNewAnn]   = useState({ title:"", message:"" });
+  const [annMsg, setAnnMsg]   = useState(null);
+
+  // Events state
+  const [events, setEvents]   = useState([]);
+  const [newEvt, setNewEvt]   = useState({ title:"", description:"", date:"", time:"", location:"" });
+  const [evtMsg, setEvtMsg]   = useState(null);
+
+  const unlock = () => {
+    if (pwInput === BOARD_PASSWORD) { setUnlocked(true); setPwError(false); setPwInput(""); }
+    else setPwError(true);
+  };
+
+  useEffect(() => {
+    if (!unlocked) return;
+    fetchBoardContent(BOARD_CONTENT_CONFIG.announcementsRange)
+      .then(rows => setAnnouncements(rows.map((r,i) => ({
+        id:i+1, title:r[0]||"", message:r[1]||"", date:r[2]||"", status:r[3]||"Active"
+      }))))
+      .catch(() => {});
+
+    fetchBoardContent(BOARD_CONTENT_CONFIG.eventsRange)
+      .then(rows => setEvents(rows.map((r,i) => ({
+        id:i+1, title:r[0]||"", description:r[1]||"", date:r[2]||"", time:r[3]||"", location:r[4]||"", status:r[5]||"Active"
+      }))))
+      .catch(() => {});
+  }, [unlocked]);
+
+  const notify = (setter, type, text) => {
+    setter({ type, text });
+    setTimeout(() => setter(null), 5000);
+  };
+
+  const addAnnouncement = async () => {
+    if (!newAnn.title.trim() || !newAnn.message.trim()) return;
+    const today = new Date().toISOString().split("T")[0];
+    const entry = { id: Date.now(), ...newAnn, date: today, status:"Active" };
+    setAnnouncements(prev => [entry, ...prev]);
+    setNewAnn({ title:"", message:"" });
+
+    if (BOARD_SCRIPT_URL === "YOUR_BOARD_SCRIPT_URL_HERE") {
+      notify(setAnnMsg, "warn", "⚠️ Apps Script not connected — visible this session only.");
+      return;
+    }
+    try {
+      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"addAnnouncement", ...entry }) });
+      const json = await res.json();
+      notify(setAnnMsg, json.success ? "ok" : "warn",
+        json.success ? "✅ Announcement saved to Google Sheets!" : "⚠️ Could not save: " + json.error);
+    } catch {
+      notify(setAnnMsg, "warn", "⚠️ Network error — visible this session only.");
+    }
+  };
+
+  const deleteAnnouncement = async (id) => {
+    const target = announcements.find(a => a.id === id);
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
+
+    if (!target || BOARD_SCRIPT_URL === "YOUR_BOARD_SCRIPT_URL_HERE") {
+      notify(setAnnMsg, "warn", "🗑 Removed from view. Delete the row in your Google Sheet too.");
+      return;
+    }
+    try {
+      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"deleteAnnouncement", title: target.title, date: target.date }) });
+      const json = await res.json();
+      notify(setAnnMsg, json.success ? "ok" : "warn",
+        json.success ? "🗑 Announcement deleted from Google Sheets!" : "⚠️ Removed from view — delete from Sheet manually.");
+    } catch {
+      notify(setAnnMsg, "warn", "⚠️ Network error — delete from Sheet manually.");
+    }
+  };
+
+  const addEvent = async () => {
+    if (!newEvt.title.trim() || !newEvt.date.trim()) return;
+    const entry = { id: Date.now(), ...newEvt, status:"Active" };
+    setEvents(prev => [entry, ...prev]);
+    setNewEvt({ title:"", description:"", date:"", time:"", location:"" });
+
+    if (BOARD_SCRIPT_URL === "YOUR_BOARD_SCRIPT_URL_HERE") {
+      notify(setEvtMsg, "warn", "⚠️ Apps Script not connected — visible this session only.");
+      return;
+    }
+    try {
+      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"addEvent", ...entry }) });
+      const json = await res.json();
+      notify(setEvtMsg, json.success ? "ok" : "warn",
+        json.success ? "✅ Event saved to Google Sheets!" : "⚠️ Could not save: " + json.error);
+    } catch {
+      notify(setEvtMsg, "warn", "⚠️ Network error — visible this session only.");
+    }
+  };
+
+  const deleteEvent = async (id) => {
+    const target = events.find(e => e.id === id);
+    setEvents(prev => prev.filter(e => e.id !== id));
+
+    if (!target || BOARD_SCRIPT_URL === "YOUR_BOARD_SCRIPT_URL_HERE") {
+      notify(setEvtMsg, "warn", "🗑 Removed from view. Delete the row in your Google Sheet too.");
+      return;
+    }
+    try {
+      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"deleteEvent", title: target.title, date: target.date }) });
+      const json = await res.json();
+      notify(setEvtMsg, json.success ? "ok" : "warn",
+        json.success ? "🗑 Event deleted from Google Sheets!" : "⚠️ Removed from view — delete from Sheet manually.");
+    } catch {
+      notify(setEvtMsg, "warn", "⚠️ Network error — delete from Sheet manually.");
+    }
+  };
+
+  const StatusMsg = ({ msg }) => msg ? (
+    <div style={{
+      ...S.card, marginBottom:16,
+      background: msg.type==="ok" ? "rgba(76,175,135,.1)" : "rgba(224,154,58,.1)",
+      border:     msg.type==="ok" ? "1px solid rgba(76,175,135,.4)" : "1px solid rgba(224,154,58,.4)",
+      color:      msg.type==="ok" ? "#4caf87" : "#e09a3a",
+      fontSize:13, fontWeight:"bold",
+    }}>{msg.text}</div>
+  ) : null;
+
+  if (!unlocked) return (
+    <div>
+      <div style={S.secHead}>🔒 Board Portal</div>
+      <div style={S.secSub}>This area is for Saint Andrews Park board members only.</div>
+      <div style={{...S.card, maxWidth:400, margin:"40px auto", textAlign:"center"}}>
+        <div style={{fontSize:48, marginBottom:16}}>🔒</div>
+        <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:18, marginBottom:8}}>Board Members Only</div>
+        <div style={{color:"#8faa9a", fontSize:13, marginBottom:24}}>Enter your board password to access this area.</div>
+        <input
+          style={{...S.input, textAlign:"center", letterSpacing:4, fontSize:18}}
+          type="password" placeholder="••••••••"
+          value={pwInput}
+          onChange={e=>{ setPwInput(e.target.value); setPwError(false); }}
+          onKeyDown={e=>e.key==="Enter"&&unlock()}
+        />
+        {pwError && <div style={{color:"#e05c5c", fontSize:13, marginBottom:12}}>Incorrect password — try again.</div>}
+        <button style={{...S.btn, width:"100%"}} onClick={unlock}>Unlock Board Portal</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12, marginBottom:8}}>
+        <div>
+          <div style={S.secHead}>🏛️ Board Portal</div>
+          <div style={S.secSub}>Manage community announcements and upcoming events.</div>
+        </div>
+        <div style={{display:"flex", gap:8, alignItems:"center"}}>
+          <span style={{...S.pill("#4caf87"), padding:"7px 14px"}}>🔓 Board Mode</span>
+          <button style={S.btnOut} onClick={()=>setUnlocked(false)}>🔒 Lock</button>
+        </div>
+      </div>
+
+      {/* Section switcher */}
+      <div style={{display:"flex", gap:8, marginBottom:24}}>
+        {[{id:"announcements",label:"📣 Announcements"},{id:"events",label:"📅 Events"}].map(s=>(
+          <button key={s.id} onClick={()=>setActiveSection(s.id)} style={{
+            padding:"10px 20px", borderRadius:8, cursor:"pointer",
+            fontFamily:"Georgia,serif", fontSize:14, fontWeight:"bold",
+            background: activeSection===s.id ? "linear-gradient(135deg,#c9a84c,#e8cc80)" : "rgba(255,255,255,.06)",
+            color:      activeSection===s.id ? "#1a2332" : "#8faa9a",
+            border:     activeSection===s.id ? "none" : "1px solid rgba(201,168,76,.2)",
+          }}>{s.label}</button>
+        ))}
+      </div>
+
+      {/* ── ANNOUNCEMENTS SECTION ── */}
+      {activeSection === "announcements" && (
+        <div>
+          <StatusMsg msg={annMsg} />
+          <div style={S.card}>
+            <div style={S.cardTitle}>➕ New Announcement</div>
+            <div style={{marginBottom:12}}>
+              <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Title *</div>
+              <input style={{...S.input, marginBottom:0}} placeholder="e.g. Road Closure Notice"
+                value={newAnn.title} onChange={e=>setNewAnn({...newAnn,title:e.target.value})} />
+            </div>
+            <div style={{marginBottom:16}}>
+              <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Message *</div>
+              <textarea style={{...S.textarea, minHeight:100, marginBottom:0}}
+                placeholder="Write your announcement here..."
+                value={newAnn.message} onChange={e=>setNewAnn({...newAnn,message:e.target.value})} />
+            </div>
+            <button style={S.btn} onClick={addAnnouncement}>📣 Post Announcement</button>
+          </div>
+
+          <div style={S.card}>
+            <div style={S.cardTitle}>📋 Posted Announcements</div>
+            {announcements.length === 0 ? (
+              <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>No announcements yet.</div>
+            ) : announcements.map(a => (
+              <div key={a.id} style={{padding:"14px 0", borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12}}>
+                  <div style={{flex:1}}>
+                    <div style={{color:"#e8e0d0", fontWeight:"bold", marginBottom:4}}>{a.title}</div>
+                    <div style={{color:"#ccc5b5", fontSize:13, lineHeight:1.7, marginBottom:4}}>{a.message}</div>
+                    {a.date && <div style={{color:"#8faa9a", fontSize:11}}>Posted: {a.date}</div>}
+                  </div>
+                  <button onClick={()=>deleteAnnouncement(a.id)} style={{
+                    background:"rgba(224,92,92,.1)", border:"1px solid rgba(224,92,92,.3)",
+                    color:"#e05c5c", borderRadius:6, padding:"6px 12px",
+                    cursor:"pointer", fontSize:12, flexShrink:0,
+                  }}>🗑 Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── EVENTS SECTION ── */}
+      {activeSection === "events" && (
+        <div>
+          <StatusMsg msg={evtMsg} />
+          <div style={S.card}>
+            <div style={S.cardTitle}>➕ New Event</div>
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12}}>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Event Title *</div>
+                <input style={{...S.input, marginBottom:0}} placeholder="e.g. Spring Community Cleanup"
+                  value={newEvt.title} onChange={e=>setNewEvt({...newEvt,title:e.target.value})} />
+              </div>
+              <div>
+                <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Date *</div>
+                <input style={{...S.input, marginBottom:0}} type="date"
+                  value={newEvt.date} onChange={e=>setNewEvt({...newEvt,date:e.target.value})} />
+              </div>
+              <div>
+                <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Time</div>
+                <input style={{...S.input, marginBottom:0}} placeholder="e.g. 10:00 AM"
+                  value={newEvt.time} onChange={e=>setNewEvt({...newEvt,time:e.target.value})} />
+              </div>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Location</div>
+                <input style={{...S.input, marginBottom:0}} placeholder="e.g. Community Pool"
+                  value={newEvt.location} onChange={e=>setNewEvt({...newEvt,location:e.target.value})} />
+              </div>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Description</div>
+                <textarea style={{...S.textarea, minHeight:80, marginBottom:0}}
+                  placeholder="Tell neighbors what to expect..."
+                  value={newEvt.description} onChange={e=>setNewEvt({...newEvt,description:e.target.value})} />
+              </div>
+            </div>
+            <button style={S.btn} onClick={addEvent}>📅 Add Event</button>
+          </div>
+
+          <div style={S.card}>
+            <div style={S.cardTitle}>📋 Scheduled Events</div>
+            {events.length === 0 ? (
+              <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>No events scheduled yet.</div>
+            ) : events.map(e => (
+              <div key={e.id} style={{
+                padding:"14px 16px", borderRadius:10, marginBottom:10,
+                background:"rgba(201,168,76,.06)", border:"1px solid rgba(201,168,76,.2)",
+              }}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12}}>
+                  <div style={{flex:1}}>
+                    <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:15, marginBottom:6}}>{e.title}</div>
+                    <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:6}}>
+                      {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>📅 {e.date}</span>}
+                      {e.time && <span style={{...S.pill("#4caf87"), fontSize:11}}>🕐 {e.time}</span>}
+                    </div>
+                    {e.location && <div style={{color:"#8faa9a", fontSize:12, marginBottom:4}}>📍 {e.location}</div>}
+                    {e.description && <div style={{color:"#ccc5b5", fontSize:13, lineHeight:1.7}}>{e.description}</div>}
+                  </div>
+                  <button onClick={()=>deleteEvent(e.id)} style={{
+                    background:"rgba(224,92,92,.1)", border:"1px solid rgba(224,92,92,.3)",
+                    color:"#e05c5c", borderRadius:6, padding:"6px 12px",
+                    cursor:"pointer", fontSize:12, flexShrink:0,
+                  }}>🗑 Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{...S.card, background:"rgba(91,141,238,.06)", border:"1px solid rgba(91,141,238,.2)"}}>
+            <div style={{color:"#5b8dee", fontWeight:"bold", marginBottom:6}}>📊 Reminder</div>
+            <div style={{color:"#8faa9a", fontSize:13}}>
+              {BOARD_SCRIPT_URL === "YOUR_BOARD_SCRIPT_URL_HERE"
+                ? <>Apps Script not yet connected. Changes are <strong style={{color:"#e8e0d0"}}>session only</strong> — update your Google Sheet manually to persist data.</>
+                : <>All additions and deletions are <strong style={{color:"#4caf87"}}>automatically saved</strong> to Google Sheets and visible to all neighbors instantly!</>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1072,11 +1380,12 @@ export default function App() {
   const [tab,setTab]=useState("dashboard");
 
   const render=()=>{switch(tab){
-    case"dashboard":   return <Dashboard/>;
+    case"dashboard":   return <Dashboard onNavigate={setTab}/>;
     case"directory":   return <NeighborhoodDirectory/>;
     case"contractors": return <Contractors/>;
     case"newsletter":  return <Newsletter/>;
     case"minutes":     return <MeetingMinutes/>;
+    case"board":       return <BoardTab/>;
     default:           return null;
   }};
   return (
