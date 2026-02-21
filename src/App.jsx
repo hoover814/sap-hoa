@@ -23,7 +23,7 @@ const BOARD_CONTENT_CONFIG = {
   eventsRange:        "Events!A2:F",
 };
 // Paste your Board Content Apps Script URL here after deploying
-const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPQAMnBZXOrQRHV_AOUZsQzkE_O-DVRqub73QFj4xFOw0cEV5V9_J9ffGjDHgEWkMq/exec";
+const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyt0w_puCjJcCT5i0zO0Tzpl4d-JMEKUmb4uJIDJLR5K1goqerB-vIesyrYSJeVWR9k/exec";
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
 const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
@@ -1129,7 +1129,8 @@ function BoardTab() {
       return;
     }
     try {
-      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"addAnnouncement", ...entry }) });
+      const p    = new URLSearchParams({ action:"addAnnouncement", title: entry.title, message: entry.message });
+      const res  = await fetch(`${BOARD_SCRIPT_URL}?${p}`);
       const json = await res.json();
       notify(setAnnMsg, json.success ? "ok" : "warn",
         json.success ? "✅ Announcement saved to Google Sheets!" : "⚠️ Could not save: " + json.error);
@@ -1147,7 +1148,8 @@ function BoardTab() {
       return;
     }
     try {
-      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"deleteAnnouncement", title: target.title, date: target.date }) });
+      const p    = new URLSearchParams({ action:"deleteAnnouncement", title: target.title });
+      const res  = await fetch(`${BOARD_SCRIPT_URL}?${p}`);
       const json = await res.json();
       notify(setAnnMsg, json.success ? "ok" : "warn",
         json.success ? "🗑 Announcement deleted from Google Sheets!" : "⚠️ Removed from view — delete from Sheet manually.");
@@ -1167,7 +1169,8 @@ function BoardTab() {
       return;
     }
     try {
-      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"addEvent", ...entry }) });
+      const p    = new URLSearchParams({ action:"addEvent", title: entry.title, description: entry.description, date: entry.date, time: entry.time, location: entry.location });
+      const res  = await fetch(`${BOARD_SCRIPT_URL}?${p}`);
       const json = await res.json();
       notify(setEvtMsg, json.success ? "ok" : "warn",
         json.success ? "✅ Event saved to Google Sheets!" : "⚠️ Could not save: " + json.error);
@@ -1185,7 +1188,8 @@ function BoardTab() {
       return;
     }
     try {
-      const res  = await fetch(BOARD_SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"deleteEvent", title: target.title, date: target.date }) });
+      const p    = new URLSearchParams({ action:"deleteEvent", title: target.title });
+      const res  = await fetch(`${BOARD_SCRIPT_URL}?${p}`);
       const json = await res.json();
       notify(setEvtMsg, json.success ? "ok" : "warn",
         json.success ? "🗑 Event deleted from Google Sheets!" : "⚠️ Removed from view — delete from Sheet manually.");
