@@ -21,9 +21,10 @@ const BOARD_CONTENT_CONFIG = {
   spreadsheetId: "1EMVVAN2rcgbYsbKo7BI2V4bHgn5NHHQREv3PbEa8e1w",
   announcementsRange: "Announcements!A2:D",
   eventsRange:        "Events!A2:F",
+  todoRange:          "TodoList!A2:F",
 };
 // Paste your Board Content Apps Script URL here after deploying
-const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyt0w_puCjJcCT5i0zO0Tzpl4d-JMEKUmb4uJIDJLR5K1goqerB-vIesyrYSJeVWR9k/exec";
+const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBN_4H7Yt567wApGQAFXyxozFwysG2PpaKDiNOOLeo4lxCI4_qQeXzGwaDD0LH3kKP/exec";
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
 const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
@@ -368,10 +369,7 @@ function NeighborhoodDirectory() {
   return (
     <div>
       <div style={S.secHead}>👥 Neighborhood Directory</div>
-      <div style={S.secSub}>
-        {usingSheets ? "✅ Live data synced from Google Sheets." : sheetError === "NETWORK_BLOCKED" ? "👁 Preview mode — showing sample data. Live data loads on GitHub Pages." : "📋 Sample data shown."}
-        {" "}<strong style={{color:"#c9a84c"}}>{neighbors.length}</strong> neighbors listed.
-      </div>
+      <div style={S.secSub}>Find and connect with your Saint Andrews Park neighbors.</div>
 
       {/* Neighborhood Map — top */}
       {!loading && neighbors.length > 0 && (
@@ -434,25 +432,6 @@ const GOOGLE_SHEETS_CONFIG = {
           placeholder="🔍 Search by name, address, phone, or email..."
           value={search} onChange={e=>setSearch(e.target.value)}
         />
-        {!boardUnlocked ? (
-          <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-            <input
-              style={{ ...S.input, width:160, marginBottom:0 }}
-              type="password" placeholder="Board password"
-              value={pwInput}
-              onChange={e=>{ setPwInput(e.target.value); setPwError(false); }}
-              onKeyDown={e=>e.key==="Enter"&&unlock()}
-            />
-            <button style={S.btn} onClick={unlock}>🔓 Unlock Editing</button>
-            {pwError && <span style={{color:"#e05c5c",fontSize:13}}>Incorrect password</span>}
-          </div>
-        ) : (
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <span style={{...S.pill("#4caf87"), padding:"7px 14px"}}>🔓 Board Mode</span>
-            <button style={S.btn} onClick={()=>setShowAdd(!showAdd)}>+ Add Neighbor</button>
-            <button style={S.btnOut} onClick={()=>setBoardUnlocked(false)}>🔒 Lock</button>
-          </div>
-        )}
       </div>
 
       {/* Add form */}
@@ -1087,6 +1066,82 @@ function BoardTab() {
   const [newAnn, setNewAnn]   = useState({ title:"", message:"" });
   const [annMsg, setAnnMsg]   = useState(null);
 
+  // To Do state
+  const [todos, setTodos]         = useState([]);
+  const [todosLoading, setTodosLoading] = useState(false);
+  const [newTodo, setNewTodo]     = useState({ text:"", priority:"medium", category:"board" });
+  const [todoFilter, setTodoFilter] = useState("all");
+  const [todoMsg, setTodoMsg]     = useState(null);
+
+  const loadTodos = () => {
+    setTodosLoading(true);
+    fetchBoardContent(BOARD_CONTENT_CONFIG.todoRange)
+      .then(rows => {
+        setTodos(rows.map(r => ({
+          id:       r[0] || "",
+          text:     r[1] || "",
+          category: r[2] || "board",
+          priority: r[3] || "medium",
+          done:     r[4] === "true",
+          created:  r[5] || "",
+        })));
+        setTodosLoading(false);
+      })
+      .catch(() => setTodosLoading(false));
+  };
+
+  const notifyTodo = (type, text) => {
+    setTodoMsg({ type, text });
+    setTimeout(() => setTodoMsg(null), 4000);
+  };
+
+  const addTodo = async () => {
+    if (!newTodo.text.trim()) return;
+    const tempId = "temp_" + Date.now();
+    const entry  = { id: tempId, ...newTodo, done: false };
+    setTodos(prev => [entry, ...prev]);
+    setNewTodo({ text:"", priority:"medium", category:"board" });
+    try {
+      const p   = new URLSearchParams({ action:"addTodo", text: entry.text, category: entry.category, priority: entry.priority });
+      const res = await fetch(`${BOARD_SCRIPT_URL}?${p}`);
+      const json = await res.json();
+      if (json.success) {
+        // Replace temp id with real sheet id
+        setTodos(prev => prev.map(t => t.id === tempId ? { ...t, id: json.id } : t));
+        notifyTodo("ok", "✅ Task saved to Google Sheets!");
+      } else notifyTodo("warn", "⚠️ Could not save: " + json.error);
+    } catch { notifyTodo("warn", "⚠️ Network error — task visible this session only."); }
+  };
+
+  const toggleTodo = async (id) => {
+    setTodos(prev => prev.map(t => t.id===id ? {...t, done:!t.done} : t));
+    try {
+      const p   = new URLSearchParams({ action:"toggleTodo", id });
+      await fetch(`${BOARD_SCRIPT_URL}?${p}`);
+    } catch {}
+  };
+
+  const deleteTodo = async (id) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+    try {
+      const p   = new URLSearchParams({ action:"deleteTodo", id });
+      await fetch(`${BOARD_SCRIPT_URL}?${p}`);
+    } catch {}
+  };
+
+  const priorityConfig = {
+    high:   { label:"High",   color:"#e05c5c" },
+    medium: { label:"Medium", color:"#e09a3a" },
+    low:    { label:"Low",    color:"#4caf87" },
+  };
+
+  const categoryConfig = {
+    landscaping: { label:"Landscaping",      color:"#4caf87", icon:"🌿" },
+    financial:   { label:"Financial",        color:"#5b8dee", icon:"💰" },
+    social:      { label:"Social Committee", color:"#c9a84c", icon:"🎉" },
+    board:       { label:"Board Task",       color:"#8b9db5", icon:"🏛️" },
+  };
+
   // Events state
   const [events, setEvents]   = useState([]);
   const [newEvt, setNewEvt]   = useState({ title:"", description:"", date:"", time:"", location:"" });
@@ -1110,6 +1165,8 @@ function BoardTab() {
         id:i+1, title:r[0]||"", description:r[1]||"", date:r[2]||"", time:r[3]||"", location:r[4]||"", status:r[5]||"Active"
       }))))
       .catch(() => {});
+
+    loadTodos();
   }, [unlocked]);
 
   const notify = (setter, type, text) => {
@@ -1243,8 +1300,8 @@ function BoardTab() {
       </div>
 
       {/* Section switcher */}
-      <div style={{display:"flex", gap:8, marginBottom:24}}>
-        {[{id:"announcements",label:"📣 Announcements"},{id:"events",label:"📅 Events"}].map(s=>(
+      <div style={{display:"flex", gap:8, marginBottom:24, flexWrap:"wrap"}}>
+        {[{id:"announcements",label:"📣 Announcements"},{id:"events",label:"📅 Events"},{id:"todo",label:"✅ To Do List"}].map(s=>(
           <button key={s.id} onClick={()=>setActiveSection(s.id)} style={{
             padding:"10px 20px", borderRadius:8, cursor:"pointer",
             fontFamily:"Georgia,serif", fontSize:14, fontWeight:"bold",
@@ -1372,6 +1429,168 @@ function BoardTab() {
                 ? <>Apps Script not yet connected. Changes are <strong style={{color:"#e8e0d0"}}>session only</strong> — update your Google Sheet manually to persist data.</>
                 : <>All additions and deletions are <strong style={{color:"#4caf87"}}>automatically saved</strong> to Google Sheets and visible to all neighbors instantly!</>}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TO DO SECTION ── */}
+      {activeSection === "todo" && (
+        <div>
+          {/* Add task */}
+          <div style={S.card}>
+            <div style={S.cardTitle}>➕ New Task</div>
+            <div style={{marginBottom:12}}>
+              <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Task *</div>
+              <input
+                style={{...S.input, marginBottom:0}}
+                placeholder="e.g. Review insurance renewal"
+                value={newTodo.text}
+                onChange={e => setNewTodo({...newTodo, text:e.target.value})}
+                onKeyDown={e => e.key==="Enter" && addTodo()}
+              />
+            </div>
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:4}}>
+              <div>
+                <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Category</div>
+                <select
+                  style={{...S.select, marginBottom:0}}
+                  value={newTodo.category}
+                  onChange={e => setNewTodo({...newTodo, category:e.target.value})}
+                >
+                  <option value="landscaping">🌿 Landscaping</option>
+                  <option value="financial">💰 Financial</option>
+                  <option value="social">🎉 Social Committee</option>
+                  <option value="board">🏛️ Board Task</option>
+                </select>
+              </div>
+              <div>
+                <div style={{color:"#c9a84c", fontSize:12, marginBottom:4}}>Priority</div>
+                <select
+                  style={{...S.select, marginBottom:0}}
+                  value={newTodo.priority}
+                  onChange={e => setNewTodo({...newTodo, priority:e.target.value})}
+                >
+                  <option value="high">🔴 High</option>
+                  <option value="medium">🟡 Medium</option>
+                  <option value="low">🟢 Low</option>
+                </select>
+              </div>
+            </div>
+            <button style={{...S.btn, marginTop:14}} onClick={addTodo}>✅ Add Task</button>
+          </div>
+
+          {/* Status message */}
+          {todoMsg && (
+            <div style={{
+              ...S.card, marginBottom:16,
+              background: todoMsg.type==="ok" ? "rgba(76,175,135,.1)" : "rgba(224,154,58,.1)",
+              border:     todoMsg.type==="ok" ? "1px solid rgba(76,175,135,.4)" : "1px solid rgba(224,154,58,.4)",
+              color:      todoMsg.type==="ok" ? "#4caf87" : "#e09a3a",
+              fontSize:13, fontWeight:"bold",
+            }}>{todoMsg.text}</div>
+          )}
+          {todosLoading && <div style={{textAlign:"center", color:"#8faa9a", padding:20}}>⏳ Loading tasks...</div>}
+
+          {/* Filter + stats */}
+          <div style={{display:"flex", gap:8, marginBottom:16, flexWrap:"wrap", alignItems:"center", justifyContent:"space-between"}}>
+            <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+              {["all","active","done"].map(f => (
+                <button key={f} onClick={()=>setTodoFilter(f)} style={{
+                  padding:"7px 16px", borderRadius:20, cursor:"pointer",
+                  fontFamily:"Georgia,serif", fontSize:13,
+                  background: todoFilter===f ? "linear-gradient(135deg,#c9a84c,#e8cc80)" : "rgba(255,255,255,.06)",
+                  color:      todoFilter===f ? "#1a2332" : "#8faa9a",
+                  border:     todoFilter===f ? "none" : "1px solid rgba(201,168,76,.2)",
+                  fontWeight: todoFilter===f ? "bold" : "normal",
+                }}>
+                  {f==="all" ? `All (${todos.length})` : f==="active" ? `Active (${todos.filter(t=>!t.done).length})` : `Done (${todos.filter(t=>t.done).length})`}
+                </button>
+              ))}
+            </div>
+            {todos.filter(t=>t.done).length > 0 && (
+              <button onClick={async ()=>{
+                setTodos(prev=>prev.filter(t=>!t.done));
+                try { await fetch(`${BOARD_SCRIPT_URL}?action=clearCompleted`); } catch {}
+              }} style={{
+                background:"rgba(224,92,92,.1)", border:"1px solid rgba(224,92,92,.3)",
+                color:"#e05c5c", borderRadius:6, padding:"6px 14px",
+                cursor:"pointer", fontSize:12,
+              }}>🗑 Clear Completed</button>
+            )}
+          </div>
+
+          {/* Task list */}
+          <div style={S.card}>
+            {todos
+              .filter(t => todoFilter==="all" ? true : todoFilter==="active" ? !t.done : t.done)
+              .sort((a,b) => {
+                const order = {high:0, medium:1, low:2};
+                if (a.done !== b.done) return a.done ? 1 : -1;
+                return order[a.priority] - order[b.priority];
+              })
+              .map(t => (
+                <div key={t.id} style={{
+                  display:"flex", alignItems:"center", gap:12,
+                  padding:"14px 0", borderBottom:"1px solid rgba(255,255,255,.06)",
+                  opacity: t.done ? 0.5 : 1, transition:"opacity .2s",
+                }}>
+                  {/* Checkbox */}
+                  <div
+                    onClick={() => toggleTodo(t.id)}
+                    style={{
+                      width:22, height:22, borderRadius:6, flexShrink:0,
+                      cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                      background: t.done ? "#4caf87" : "transparent",
+                      border: t.done ? "2px solid #4caf87" : "2px solid rgba(255,255,255,.2)",
+                      fontSize:13, transition:"all .2s",
+                    }}
+                  >{t.done ? "✓" : ""}</div>
+
+                  {/* Text */}
+                  <div style={{flex:1}}>
+                    <span style={{
+                      color:"#e8e0d0", fontSize:14,
+                      textDecoration: t.done ? "line-through" : "none",
+                    }}>{t.text}</span>
+                  </div>
+
+                  {/* Category badge */}
+                  {t.category && categoryConfig[t.category] && (
+                    <span style={{
+                      fontSize:11, fontWeight:"bold", padding:"3px 10px", borderRadius:20,
+                      background: `${categoryConfig[t.category].color}22`,
+                      color: categoryConfig[t.category].color,
+                      border: `1px solid ${categoryConfig[t.category].color}44`,
+                      flexShrink:0,
+                    }}>{categoryConfig[t.category].icon} {categoryConfig[t.category].label}</span>
+                  )}
+
+                  {/* Priority badge */}
+                  <span style={{
+                    fontSize:11, fontWeight:"bold", padding:"3px 10px", borderRadius:20,
+                    background: `${priorityConfig[t.priority].color}22`,
+                    color: priorityConfig[t.priority].color,
+                    border: `1px solid ${priorityConfig[t.priority].color}44`,
+                    flexShrink:0,
+                  }}>{priorityConfig[t.priority].label}</span>
+
+                  {/* Delete */}
+                  <button onClick={()=>deleteTodo(t.id)} style={{
+                    background:"transparent", border:"none",
+                    color:"rgba(224,92,92,.3)", cursor:"pointer",
+                    fontSize:16, flexShrink:0, transition:"color .2s",
+                  }}
+                    onMouseEnter={e=>e.target.style.color="#e05c5c"}
+                    onMouseLeave={e=>e.target.style.color="rgba(224,92,92,.3)"}
+                  >✕</button>
+                </div>
+              ))
+            }
+            {todos.filter(t => todoFilter==="all" ? true : todoFilter==="active" ? !t.done : t.done).length === 0 && (
+              <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
+                {todoFilter==="done" ? "No completed tasks yet. Keep going! 💪" : "All caught up! Great work. 🎉"}
+              </div>
+            )}
           </div>
         </div>
       )}
