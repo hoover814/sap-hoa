@@ -9,13 +9,13 @@ const GOOGLE_SHEETS_CONFIG = {
 const BOARD_PASSWORD = "SAP2026"; // change before deploying!
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
-const NEIGHBORHOOD_CENTER = [33.9720, -84.5680];
+const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
 const NEIGHBORHOOD_ZOOM   = 17;
 
 // Street name → approximate lat/lng lookup for Saints Drive/Court addresses
 const STREET_COORDS = {
-  "saints drive": { lat: 33.9720, lngBase: -84.5690, lngStep: 0.0002 },
-  "saints court": { lat: 33.9728, lngBase: -84.5675, lngStep: 0.0002 },
+  "saints drive": { lat: 33.96928, lngBase: -84.39520, lngStep: 0.00015 },
+  "saints court": { lat: 33.96980, lngBase: -84.39430, lngStep: 0.00015 },
 };
 
 function getApproxCoords(address) {
@@ -35,10 +35,11 @@ function getApproxCoords(address) {
 
 // ── TABS ───────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "dashboard",  label: "🏡 Dashboard" },
-  { id: "directory",  label: "👥 Directory" },
-  { id: "newsletter", label: "📰 Newsletter" },
-  { id: "minutes",    label: "📋 Meeting Minutes" },
+  { id: "dashboard",   label: "🏡 Dashboard" },
+  { id: "directory",   label: "👥 Directory" },
+  { id: "contractors", label: "🔨 Contractors" },
+  { id: "newsletter",  label: "📰 Newsletter" },
+  { id: "minutes",     label: "📋 Meeting Minutes" },
 ];
 
 
@@ -633,18 +634,319 @@ function MeetingMinutes() {
   );
 }
 
+// ── CONTRACTORS DATA ──────────────────────────────────────────────────────────
+const CONTRACTOR_CATEGORIES = [
+  { id: "painters",     label: "Painters",          icon: "🎨" },
+  { id: "roofers",      label: "Roofers",            icon: "🏠" },
+  { id: "plumbing",     label: "Plumbing",           icon: "🔧" },
+  { id: "ac_heating",   label: "A/C & Heating",      icon: "❄️" },
+  { id: "realtors",     label: "Realtors",           icon: "🏡" },
+  { id: "landscaping",  label: "Landscaping",        icon: "🌿" },
+  { id: "others",       label: "Others",             icon: "⭐" },
+];
+
+const SAMPLE_CONTRACTORS = [
+  { id: 1, category:"painters",    business:"Atlanta Pro Painters",    contact:"John Smith",   phone:"(404) 555-0201", website:"atlantapropainters.com",  note:"Did our whole exterior — great work!" },
+  { id: 2, category:"roofers",     business:"Saints Roofing Co.",       contact:"Mike Davis",   phone:"(770) 555-0301", website:"saintsroofing.com",        note:"Quick response after storm damage." },
+  { id: 3, category:"plumbing",    business:"Peach State Plumbing",     contact:"Tom Greene",   phone:"(678) 555-0401", website:"peachstateplumbing.com",   note:"Fixed our water heater same day." },
+  { id: 4, category:"ac_heating",  business:"Cool Breeze HVAC",         contact:"Sara Lee",     phone:"(404) 555-0501", website:"coolbreezehvac.com",       note:"Annual maintenance, very reliable." },
+  { id: 5, category:"realtors",    business:"Marietta Home Group",      contact:"Lisa Park",    phone:"(770) 555-0601", website:"mariettahomegroup.com",    note:"Helped 3 families on our street!" },
+  { id: 6, category:"landscaping", business:"Green Thumb Landscaping",  contact:"Carlos Ruiz",  phone:"(678) 555-0701", website:"greenthumbga.com",         note:"Weekly lawn care, very professional." },
+];
+
+// ── CONTRACTORS TAB ────────────────────────────────────────────────────────────
+function Contractors() {
+  const [contractors, setContractors] = useState(SAMPLE_CONTRACTORS);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState("");
+  const [newC, setNewC] = useState({ category:"painters", business:"", contact:"", phone:"", website:"", note:"" });
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const addContractor = () => {
+    if (!newC.business.trim()) return;
+    setContractors([...contractors, { ...newC, id: Date.now() }]);
+    setNewC({ category:"painters", business:"", contact:"", phone:"", website:"", note:"" });
+    setShowAdd(false);
+  };
+
+  const removeContractor = (id) => {
+    setContractors(contractors.filter(c => c.id !== id));
+    setConfirmDelete(null);
+  };
+
+  const filtered = contractors.filter(c => {
+    const matchCat = activeCategory === "all" || c.category === activeCategory;
+    const matchSearch = [c.business, c.contact, c.phone, c.note].some(f =>
+      f.toLowerCase().includes(search.toLowerCase())
+    );
+    return matchCat && matchSearch;
+  });
+
+  const catColors = {
+    painters:    "#5b8dee",
+    roofers:     "#e09a3a",
+    plumbing:    "#3ab8c9",
+    ac_heating:  "#7c5be0",
+    realtors:    "#c9a84c",
+    landscaping: "#4caf87",
+    others:      "#8b9db5",
+  };
+
+  return (
+    <div>
+      <div style={S.secHead}>🔨 Contractor Directory</div>
+      <div style={S.secSub}>Community-recommended contractors for home improvements. Add one you've used!</div>
+
+      {/* Category filter pills */}
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20 }}>
+        <button
+          onClick={() => setActiveCategory("all")}
+          style={{
+            padding:"8px 16px", borderRadius:20, cursor:"pointer",
+            fontFamily:"Georgia,serif", fontSize:13,
+            background: activeCategory==="all" ? "linear-gradient(135deg,#c9a84c,#e8cc80)" : "rgba(255,255,255,.06)",
+            color: activeCategory==="all" ? "#1a2332" : "#8faa9a",
+            border: activeCategory==="all" ? "none" : "1px solid rgba(201,168,76,.2)",
+            fontWeight: activeCategory==="all" ? "bold" : "normal",
+          }}
+        >
+          All ({contractors.length})
+        </button>
+        {CONTRACTOR_CATEGORIES.map(cat => {
+          const count = contractors.filter(c => c.category === cat.id).length;
+          const active = activeCategory === cat.id;
+          return (
+            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} style={{
+              padding:"8px 16px", borderRadius:20, cursor:"pointer",
+              fontFamily:"Georgia,serif", fontSize:13,
+              background: active ? `${catColors[cat.id]}33` : "rgba(255,255,255,.06)",
+              color: active ? catColors[cat.id] : "#8faa9a",
+              border: active ? `1px solid ${catColors[cat.id]}66` : "1px solid rgba(201,168,76,.2)",
+              fontWeight: active ? "bold" : "normal",
+            }}>
+              {cat.icon} {cat.label} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search + Add button */}
+      <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
+        <input
+          style={{ ...S.input, flex:1, minWidth:200, marginBottom:0 }}
+          placeholder="🔍 Search contractors..."
+          value={search} onChange={e => setSearch(e.target.value)}
+        />
+        <button style={S.btn} onClick={() => setShowAdd(!showAdd)}>
+          {showAdd ? "✕ Cancel" : "+ Add Contractor"}
+        </button>
+      </div>
+
+      {/* Add Contractor Form */}
+      {showAdd && (
+        <div style={{ ...S.card, border:"1px solid rgba(201,168,76,.4)" }}>
+          <div style={S.cardTitle}>➕ Add a Contractor</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div style={{ gridColumn:"1/-1" }}>
+              <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Category</div>
+              <select
+                style={{ ...S.select, width:"100%", marginRight:0 }}
+                value={newC.category}
+                onChange={e => setNewC({...newC, category:e.target.value})}
+              >
+                {CONTRACTOR_CATEGORIES.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
+                ))}
+              </select>
+            </div>
+            {[
+              { label:"Business Name *", field:"business", ph:"e.g. Atlanta Pro Painters" },
+              { label:"Contact Person",  field:"contact",  ph:"e.g. John Smith" },
+              { label:"Phone Number",    field:"phone",    ph:"e.g. (404) 555-0100" },
+              { label:"Website",         field:"website",  ph:"e.g. example.com" },
+            ].map(({label, field, ph}) => (
+              <div key={field}>
+                <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>{label}</div>
+                <input
+                  style={{ ...S.input, marginBottom:0 }}
+                  placeholder={ph}
+                  value={newC[field]}
+                  onChange={e => setNewC({...newC, [field]:e.target.value})}
+                />
+              </div>
+            ))}
+            <div style={{ gridColumn:"1/-1" }}>
+              <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Neighbor Recommendation / Note</div>
+              <input
+                style={{ ...S.input, marginBottom:0 }}
+                placeholder="e.g. Repainted our fence — great price and quality!"
+                value={newC.note}
+                onChange={e => setNewC({...newC, note:e.target.value})}
+              />
+            </div>
+          </div>
+          <div style={{ marginTop:16 }}>
+            <button style={S.btn} onClick={addContractor}>💾 Save Contractor</button>
+            <button style={S.btnOut} onClick={() => setShowAdd(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Contractor Cards grouped by category */}
+      {activeCategory === "all" ? (
+        CONTRACTOR_CATEGORIES.map(cat => {
+          const catItems = filtered.filter(c => c.category === cat.id);
+          if (catItems.length === 0) return null;
+          return (
+            <div key={cat.id} style={{ marginBottom:32 }}>
+              <div style={{
+                display:"flex", alignItems:"center", gap:10,
+                marginBottom:14, paddingBottom:8,
+                borderBottom:`2px solid ${catColors[cat.id]}44`,
+              }}>
+                <span style={{ fontSize:22 }}>{cat.icon}</span>
+                <span style={{ color: catColors[cat.id], fontWeight:"bold", fontSize:18 }}>{cat.label}</span>
+                <span style={{ ...S.pill(catColors[cat.id]), marginLeft:4 }}>{catItems.length}</span>
+              </div>
+              <ContractorGrid items={catItems} catColor={catColors[cat.id]} onDelete={setConfirmDelete} />
+            </div>
+          );
+        })
+      ) : (
+        <div>
+          {(() => {
+            const cat = CONTRACTOR_CATEGORIES.find(c => c.id === activeCategory);
+            return (
+              <div style={{
+                display:"flex", alignItems:"center", gap:10,
+                marginBottom:14, paddingBottom:8,
+                borderBottom:`2px solid ${catColors[activeCategory]}44`,
+              }}>
+                <span style={{ fontSize:22 }}>{cat.icon}</span>
+                <span style={{ color: catColors[activeCategory], fontWeight:"bold", fontSize:18 }}>{cat.label}</span>
+                <span style={{ ...S.pill(catColors[activeCategory]), marginLeft:4 }}>{filtered.length}</span>
+              </div>
+            );
+          })()}
+          <ContractorGrid items={filtered} catColor={catColors[activeCategory]} onDelete={setConfirmDelete} />
+        </div>
+      )}
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign:"center", color:"#8faa9a", padding:40 }}>
+          No contractors found. Be the first to add one! 🔨
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div style={{
+          position:"fixed", top:0, left:0, right:0, bottom:0,
+          background:"rgba(0,0,0,.6)", display:"flex",
+          alignItems:"center", justifyContent:"center", zIndex:1000,
+        }}>
+          <div style={{ ...S.card, maxWidth:360, textAlign:"center" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>🗑</div>
+            <div style={{ color:"#e8e0d0", fontWeight:"bold", marginBottom:8 }}>Remove this contractor?</div>
+            <div style={{ color:"#8faa9a", fontSize:13, marginBottom:20 }}>
+              This will remove them from the community list.
+            </div>
+            <button style={{ ...S.btn, marginRight:8 }} onClick={() => removeContractor(confirmDelete)}>Yes, Remove</button>
+            <button style={S.btnOut} onClick={() => setConfirmDelete(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContractorGrid({ items, catColor, onDelete }) {
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
+      {items.map(c => (
+        <div key={c.id} style={{
+          background:"rgba(255,255,255,.05)",
+          border:`1px solid ${catColor}22`,
+          borderRadius:12, padding:20,
+          transition:"all .2s",
+          position:"relative",
+        }}>
+          {/* Category color bar */}
+          <div style={{
+            position:"absolute", top:0, left:0, right:0, height:3,
+            background:`linear-gradient(90deg,${catColor},${catColor}44)`,
+            borderRadius:"12px 12px 0 0",
+          }} />
+
+          <div style={{ fontWeight:"bold", fontSize:16, color:"#e8e0d0", marginBottom:10, marginTop:4 }}>
+            {c.business}
+          </div>
+
+          {c.contact && (
+            <div style={{ ...S.infoRow, marginBottom:6 }}>
+              <span style={{ ...S.infoIcon, color: catColor }}>👤</span>
+              <span style={{ color:"#8faa9a", fontSize:13 }}>{c.contact}</span>
+            </div>
+          )}
+          {c.phone && (
+            <div style={{ ...S.infoRow, marginBottom:6 }}>
+              <span style={{ ...S.infoIcon, color: catColor }}>📞</span>
+              <a href={`tel:${c.phone}`} style={{ color:"#5b8dee", fontSize:13, textDecoration:"none" }}>{c.phone}</a>
+            </div>
+          )}
+          {c.website && (
+            <div style={{ ...S.infoRow, marginBottom:6 }}>
+              <span style={{ ...S.infoIcon, color: catColor }}>🌐</span>
+              <a href={`https://${c.website.replace(/^https?:\/\//, "")}`} target="_blank" rel="noreferrer"
+                style={{ color:"#5b8dee", fontSize:13, textDecoration:"none", wordBreak:"break-all" }}>
+                {c.website}
+              </a>
+            </div>
+          )}
+          {c.note && (
+            <div style={{
+              marginTop:12, padding:"10px 12px",
+              background:`${catColor}11`,
+              border:`1px solid ${catColor}22`,
+              borderRadius:8, fontSize:12,
+              color:"#ccc5b5", lineHeight:1.6,
+              fontStyle:"italic",
+            }}>
+              💬 "{c.note}"
+            </div>
+          )}
+
+          <button
+            onClick={() => onDelete(c.id)}
+            style={{
+              position:"absolute", top:12, right:12,
+              background:"transparent", border:"none",
+              color:"rgba(224,92,92,.4)", cursor:"pointer",
+              fontSize:16, lineHeight:1,
+              transition:"color .2s",
+            }}
+            onMouseEnter={e => e.target.style.color="#e05c5c"}
+            onMouseLeave={e => e.target.style.color="rgba(224,92,92,.4)"}
+            title="Remove contractor"
+          >✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── ROOT ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab,setTab]=useState("dashboard");
 
   const render=()=>{switch(tab){
-    case"dashboard":  return <Dashboard/>;
-    case"directory":  return <NeighborhoodDirectory/>;
-
-    case"newsletter": return <Newsletter/>;
-    case"minutes":    return <MeetingMinutes/>;
-
-    default:          return null;
+    case"dashboard":   return <Dashboard/>;
+    case"directory":   return <NeighborhoodDirectory/>;
+    case"contractors": return <Contractors/>;
+    case"newsletter":  return <Newsletter/>;
+    case"minutes":     return <MeetingMinutes/>;
+    default:           return null;
   }};
   return (
     <div style={S.app}>
