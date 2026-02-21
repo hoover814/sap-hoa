@@ -25,6 +25,8 @@ const BOARD_CONTENT_CONFIG = {
 };
 // Paste your Board Content Apps Script URL here after deploying
 const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBN_4H7Yt567wApGQAFXyxozFwysG2PpaKDiNOOLeo4lxCI4_qQeXzGwaDD0LH3kKP/exec";
+// Paste your Directory Apps Script Web App URL here after deploying
+const DIRECTORY_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybEBISWuZwCrhQsEB5GGIfvmDwXT8YuJEzEeiddl-b1JGn0VRKkttp6BINeJkB8MCL/exec";
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
 const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
@@ -321,6 +323,227 @@ function NeighborhoodMap({ neighbors, selectedId, onSelectPin }) {
   );
 }
 
+// ── EXPANDABLE CONTACT FORM ────────────────────────────────────────────────────
+function ExpandableContactForm({ neighbors, onSubmit }) {
+  const [open, setOpen]       = useState(false);
+  const [mode, setMode]       = useState("add"); // "add" | "edit"
+  const [search, setSearch]   = useState("");
+  const [selected, setSelected] = useState(null);
+  const [msg, setMsg]         = useState(null);
+  const blankForm             = { name:"", address:"", phone:"", email:"" };
+  const [form, setForm]       = useState(blankForm);
+
+  const filteredNeighbors = neighbors.filter(n =>
+    n.name.toLowerCase().includes(search.toLowerCase()) ||
+    n.address.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectNeighbor = (n) => {
+    setSelected(n);
+    setForm({ id: n.id, name: n.name, address: n.address, phone: n.phone, email: n.email });
+    setSearch(n.name);
+  };
+
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!form.name.trim()) return;
+    setSubmitting(true);
+
+    if (DIRECTORY_SCRIPT_URL === "YOUR_DIRECTORY_SCRIPT_URL_HERE") {
+      // No script connected — just update local view
+      onSubmit(form, mode);
+      setMsg({ type:"ok", text: mode === "add"
+        ? "✅ Added locally! Connect the Directory Script to save permanently."
+        : "✅ Updated locally! Connect the Directory Script to save permanently." });
+      setForm(blankForm); setSelected(null); setSearch("");
+      setSubmitting(false);
+      setTimeout(() => setMsg(null), 5000);
+      return;
+    }
+
+    try {
+      const action = mode === "add" ? "submitAdd" : "submitEdit";
+      const p = new URLSearchParams({
+        action,
+        name:         form.name,
+        address:      form.address  || "",
+        phone:        form.phone    || "",
+        email:        form.email    || "",
+        originalName: selected?.name || "",
+      });
+      const res  = await fetch(`${DIRECTORY_SCRIPT_URL}?${p}`);
+      const json = await res.json();
+      if (json.success) {
+        setMsg({ type:"ok", text: mode === "add"
+          ? "📬 Your request has been sent to the board for approval! It will appear in the directory once reviewed."
+          : "📬 Your edit request has been sent to the board for approval! Changes will go live once reviewed." });
+        setForm(blankForm); setSelected(null); setSearch("");
+      } else {
+        setMsg({ type:"err", text: "⚠️ Could not submit: " + json.error });
+      }
+    } catch {
+      setMsg({ type:"err", text: "⚠️ Network error — please try again." });
+    }
+    setSubmitting(false);
+    setTimeout(() => setMsg(null), 8000);
+  };
+
+  const handleModeSwitch = (m) => {
+    setMode(m);
+    setForm(blankForm);
+    setSelected(null);
+    setSearch("");
+    setMsg(null);
+  };
+
+  return (
+    <div style={{ marginBottom:20 }}>
+      {/* Toggle button */}
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width:"100%", padding:"14px 20px",
+          background: open ? "rgba(201,168,76,.12)" : "rgba(255,255,255,.04)",
+          border:`1px solid ${open ? "rgba(201,168,76,.5)" : "rgba(201,168,76,.2)"}`,
+          borderRadius:10, cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          fontFamily:"Georgia,serif", marginBottom: open ? 0 : 0,
+          transition:"all .2s",
+        }}
+      >
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:18 }}>📝</span>
+          <span style={{ color:"#c9a84c", fontWeight:"bold", fontSize:15 }}>Add or Update Your Contact Info</span>
+        </div>
+        <span style={{ color:"#c9a84c", fontSize:18, transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+      </button>
+
+      {/* Expandable panel */}
+      {open && (
+        <div style={{
+          ...{background:"rgba(255,255,255,.03)", border:"1px solid rgba(201,168,76,.2)", borderTop:"none",
+          borderRadius:"0 0 10px 10px", padding:"20px"},
+        }}>
+          {/* Mode switcher */}
+          <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+            {[{id:"add",label:"➕ Add New Neighbor"},{id:"edit",label:"✏️ Edit My Info"}].map(m => (
+              <button key={m.id} onClick={() => handleModeSwitch(m.id)} style={{
+                padding:"9px 18px", borderRadius:8, cursor:"pointer",
+                fontFamily:"Georgia,serif", fontSize:13, fontWeight:"bold",
+                background: mode===m.id ? "linear-gradient(135deg,#c9a84c,#e8cc80)" : "rgba(255,255,255,.06)",
+                color:      mode===m.id ? "#1a2332" : "#8faa9a",
+                border:     mode===m.id ? "none" : "1px solid rgba(201,168,76,.2)",
+              }}>{m.label}</button>
+            ))}
+          </div>
+
+          {/* Edit mode — search to find neighbor */}
+          {mode === "edit" && (
+            <div style={{ marginBottom:16, position:"relative" }}>
+              <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Search for your name</div>
+              <input
+                style={{ ...{width:"100%", padding:"10px 14px", borderRadius:8, border:"1px solid rgba(201,168,76,.3)",
+                  background:"rgba(255,255,255,.06)", color:"#e8e0d0", fontSize:14,
+                  fontFamily:"Georgia,serif", boxSizing:"border-box"} }}
+                placeholder="Start typing your name or address..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setSelected(null); setForm(blankForm); }}
+              />
+              {/* Dropdown results */}
+              {search.length > 1 && !selected && filteredNeighbors.length > 0 && (
+                <div style={{
+                  position:"absolute", top:"100%", left:0, right:0, zIndex:100,
+                  background:"#1e2d3d", border:"1px solid rgba(201,168,76,.3)",
+                  borderRadius:"0 0 8px 8px", maxHeight:200, overflowY:"auto",
+                }}>
+                  {filteredNeighbors.map(n => (
+                    <div key={n.id} onClick={() => selectNeighbor(n)} style={{
+                      padding:"10px 14px", cursor:"pointer", borderBottom:"1px solid rgba(255,255,255,.06)",
+                      color:"#e8e0d0", fontSize:13,
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background="rgba(201,168,76,.1)"}
+                      onMouseLeave={e => e.currentTarget.style.background="transparent"}
+                    >
+                      <strong>{n.name}</strong>
+                      <span style={{ color:"#8faa9a", marginLeft:8, fontSize:12 }}>{n.address}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Form fields — show for add always, or edit once neighbor selected */}
+          {(mode === "add" || selected) && (
+            <div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+                {[
+                  { label:"Full Name / Family Name", field:"name",    ph:"e.g. The Smith Family",       required:true },
+                  { label:"Street Address",           field:"address", ph:"e.g. 851 Saints Drive",       required:false },
+                  { label:"Phone Number",             field:"phone",   ph:"e.g. (404) 555-0100",         required:false },
+                  { label:"Email Address",            field:"email",   ph:"e.g. family@email.com",       required:false },
+                ].map(({ label, field, ph, required }) => (
+                  <div key={field}>
+                    <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>
+                      {label} {required && <span style={{color:"#e05c5c"}}>*</span>}
+                    </div>
+                    <input
+                      style={{ width:"100%", padding:"10px 14px", borderRadius:8,
+                        border:"1px solid rgba(201,168,76,.3)", background:"rgba(255,255,255,.06)",
+                        color:"#e8e0d0", fontSize:14, fontFamily:"Georgia,serif", boxSizing:"border-box" }}
+                      placeholder={ph}
+                      value={form[field]}
+                      onChange={e => setForm({...form, [field]: e.target.value})}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {msg && (
+                <div style={{
+                  padding:"10px 14px", borderRadius:8, marginBottom:14, fontSize:13, fontWeight:"bold",
+                  background: msg.type==="ok" ? "rgba(76,175,135,.1)" : "rgba(224,92,92,.1)",
+                  border:     msg.type==="ok" ? "1px solid rgba(76,175,135,.4)" : "1px solid rgba(224,92,92,.4)",
+                  color:      msg.type==="ok" ? "#4caf87" : "#e05c5c",
+                }}>{msg.text}</div>
+              )}
+
+              <div style={{ display:"flex", gap:8 }}>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  style={{
+                    padding:"10px 24px", borderRadius:8, cursor: submitting ? "not-allowed" : "pointer",
+                    background:"linear-gradient(135deg,#c9a84c,#e8cc80)",
+                    color:"#1a2332", fontWeight:"bold", fontSize:14,
+                    fontFamily:"Georgia,serif", border:"none",
+                    opacity: submitting ? 0.7 : 1,
+                  }}
+                >
+                  {submitting ? "⏳ Submitting..." : mode === "add" ? "📬 Submit for Approval" : "📬 Submit Changes"}
+                </button>
+                <button onClick={() => { setOpen(false); handleModeSwitch("add"); }} style={{
+                  padding:"10px 18px", borderRadius:8, cursor:"pointer",
+                  background:"transparent", border:"1px solid rgba(201,168,76,.3)",
+                  color:"#8faa9a", fontSize:14, fontFamily:"Georgia,serif",
+                }}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop:16, padding:"10px 14px", borderRadius:8,
+            background:"rgba(91,141,238,.06)", border:"1px solid rgba(91,141,238,.2)" }}>
+            <div style={{ color:"#5b8dee", fontSize:12 }}>
+              💡 All additions and edits go to the board for review before appearing in the directory. This keeps everyone's information accurate and up to date!
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── NEIGHBORHOOD DIRECTORY ─────────────────────────────────────────────────────
 function NeighborhoodDirectory() {
   const [neighbors, setNeighbors] = useState(SAMPLE_NEIGHBORS);
@@ -389,6 +612,17 @@ function NeighborhoodDirectory() {
           selectedId={selectedPin}
           onSelectPin={id => setSelectedPin(id === selectedPin ? null : id)}
         />
+      )}
+
+      {/* ── Expandable Add / Edit Contact Section ── */}
+      {neighbors.length > 0 && (
+        <ExpandableContactForm neighbors={neighbors} onSubmit={(data, type) => {
+          if (type === "add") {
+            setNeighbors(prev => [...prev, { ...data, id: Date.now() }]);
+          } else {
+            setNeighbors(prev => prev.map(n => n.id === data.id ? { ...n, ...data } : n));
+          }
+        }} />
       )}
 
       {/* Google Sheets setup guide */}
@@ -808,10 +1042,7 @@ function Contractors() {
   return (
     <div>
       <div style={S.secHead}>🔨 Contractor Directory</div>
-      <div style={S.secSub}>
-        {usingSheets ? "✅ Live data synced from Google Sheets." : sheetError === "NETWORK_BLOCKED" ? "👁 Preview mode — showing sample data. Live data loads on GitHub Pages." : "📋 Sample data shown."}
-        {" "}<strong style={{color:"#c9a84c"}}>{contractors.length}</strong> contractors listed.
-      </div>
+      <div style={S.secSub}>Community-recommended contractors for home improvements. Add one you've used!</div>
       {sheetError && sheetError !== "NETWORK_BLOCKED" && (
         <div style={{ ...S.card, border:"1px solid rgba(224,92,92,.3)", background:"rgba(224,92,92,.07)", marginBottom:16 }}>
           <div style={{color:"#e05c5c", fontWeight:"bold", marginBottom:6}}>⚠️ Could Not Connect to Google Sheets</div>
