@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 const GOOGLE_SHEETS_CONFIG = {
   apiKey: "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
   spreadsheetId: "15BjVviB6RcHlGjg_Kc9-GSgea7RgXKEVWhO44XDJEDQ",
-  range: "Directory!A2:D",
+  range: "Directory!A2:F",
 };
 
 const CONTRACTORS_SHEET_CONFIG = {
@@ -203,7 +203,7 @@ async function fetchFromSheets() {
   const data = await res.json();
   if (!data.values || data.values.length === 0) return [];
   return data.values.map((row, i) => ({
-    id: i + 1, name: row[0]||"", address: row[1]||"", phone: row[2]||"", email: row[3]||"",
+    id: i + 1, name: row[0]||"", address: row[1]||"", lat: parseFloat(row[2])||null, lng: parseFloat(row[3])||null, phone: row[4]||"", email: row[5]||"",
   }));
 }
 
@@ -257,7 +257,7 @@ function NeighborhoodMap({ neighbors, selectedId, onSelectPin }) {
     });
 
     neighbors.forEach(n => {
-      const coords = getApproxCoords(n.address);
+      const coords = (n.lat && n.lng) ? [n.lat, n.lng] : getApproxCoords(n.address);
       if (!coords) return;
       const marker = L.marker(coords, { icon: pinIcon })
         .addTo(map)
