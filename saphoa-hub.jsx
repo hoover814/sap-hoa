@@ -1,5 +1,24 @@
 import { useState, useEffect, useRef } from "react";
 
+// ── RESPONSIVE HOOK ───────────────────────────────────────────────────────────
+function useIsMobile() {
+  const [mobile, setMobile] = useState(window.innerWidth < 640);
+  useEffect(() => {
+    // Ensure proper viewport meta on mobile
+    let meta = document.querySelector("meta[name=viewport]");
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "viewport";
+      document.head.appendChild(meta);
+    }
+    meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
+    const fn = () => setMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
+  return mobile;
+}
+
 // ── CONFIGURATION — update these when deploying to GitHub ──────────────────────
 const GOOGLE_SHEETS_CONFIG = {
   apiKey: "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
@@ -25,6 +44,7 @@ const BOARD_CONTENT_CONFIG = {
 };
 // Paste your Board Content Apps Script URL here after deploying
 const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBN_4H7Yt567wApGQAFXyxozFwysG2PpaKDiNOOLeo4lxCI4_qQeXzGwaDD0LH3kKP/exec";
+const ARC_SCRIPT_URL   = "https://script.google.com/macros/s/AKfycbyUGnXF4yPdPyKIDuKfKVeHuFRsgKDF7vdyv0fDjcos3XWDFqWcJJ20nh4EtNBasNo-/exec";
 // Paste your Directory Apps Script Web App URL here after deploying
 const DIRECTORY_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybEBISWuZwCrhQsEB5GGIfvmDwXT8YuJEzEeiddl-b1JGn0VRKkttp6BINeJkB8MCL/exec";
 
@@ -34,12 +54,12 @@ const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
 
 // ── TABS ───────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "dashboard",   label: "🏡 Dashboard" },
-  { id: "directory",   label: "👥 Directory" },
-  { id: "contractors", label: "🔨 Contractors" },
-  { id: "newsletter",  label: "📰 Newsletter" },
-  { id: "minutes",     label: "📋 Meeting Minutes" },
-  { id: "board",       label: "🔒 Board" },
+  { id: "dashboard",   label: "Dashboard" },
+  { id: "directory",   label: "Directory" },
+  { id: "contractors", label: "Contractors" },
+  { id: "newsletter",  label: "Newsletter" },
+  { id: "arc",         label: "ACR" },
+  { id: "board",       label: "Board" },
 ];
 
 
@@ -67,15 +87,15 @@ const avatarGradients = [
 // ── STYLES ─────────────────────────────────────────────────────────────────────
 const S = {
   app:       { fontFamily:"Georgia,'Times New Roman',serif", background:"linear-gradient(135deg,#1a2332 0%,#243447 50%,#1e3a2f 100%)", minHeight:"100vh", color:"#e8e0d0" },
-  header:    { background:"linear-gradient(90deg,#0f1e2e,#1a3a28)", borderBottom:"2px solid #c9a84c", padding:"20px 32px", display:"flex", alignItems:"center", justifyContent:"space-between" },
-  logoIcon:  { width:48, height:48, background:"linear-gradient(135deg,#c9a84c,#e8cc80)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, boxShadow:"0 4px 12px rgba(201,168,76,.4)" },
+  header:    { background:"linear-gradient(90deg,#0f1e2e,#1a3a28)", borderBottom:"2px solid #c9a84c", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 },
+  logoIcon:  { width:40, height:40, background:"linear-gradient(135deg,#c9a84c,#e8cc80)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, boxShadow:"0 4px 12px rgba(201,168,76,.4)" },
   logoTitle: { fontSize:20, fontWeight:"bold", color:"#c9a84c", letterSpacing:.5 },
   logoSub:   { fontSize:12, color:"#8faa9a", letterSpacing:2, textTransform:"uppercase" },
   badge:     { background:"#c9a84c", color:"#1a2332", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:"bold", letterSpacing:1 },
-  nav:       { display:"flex", gap:4, padding:"16px 32px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)", overflowX:"auto" },
-  navBtn: a=>({ padding:"10px 20px", borderRadius:8, border:a?"1px solid #c9a84c":"1px solid transparent", background:a?"rgba(201,168,76,.15)":"transparent", color:a?"#c9a84c":"#8faa9a", cursor:"pointer", fontSize:14, fontFamily:"Georgia,serif", whiteSpace:"nowrap", transition:"all .2s" }),
-  main:      { padding:32, maxWidth:1100, margin:"0 auto" },
-  card:      { background:"rgba(255,255,255,.05)", border:"1px solid rgba(201,168,76,.2)", borderRadius:12, padding:24, marginBottom:20, backdropFilter:"blur(4px)" },
+  nav:       { display:"flex", gap:4, padding:"10px 12px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)", overflowX:"auto", WebkitOverflowScrolling:"touch" },
+  navBtn: a=>({ padding:"8px 14px", borderRadius:8, border:a?"1px solid #c9a84c":"1px solid transparent", background:a?"rgba(201,168,76,.15)":"transparent", color:a?"#c9a84c":"#8faa9a", cursor:"pointer", fontSize:13, fontFamily:"Georgia,serif", whiteSpace:"nowrap", transition:"all .2s" }),
+  main:      { padding:"20px 16px", maxWidth:1100, margin:"0 auto" },
+  card:      { background:"rgba(255,255,255,.05)", border:"1px solid rgba(201,168,76,.2)", borderRadius:12, padding:"clamp(14px,3vw,24px)", marginBottom:20, backdropFilter:"blur(4px)" },
   cardTitle: { color:"#c9a84c", fontSize:18, marginBottom:16, fontWeight:"bold", borderBottom:"1px solid rgba(201,168,76,.2)", paddingBottom:10 },
   grid3:     { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:24 },
   statCard: a=>({ background:`linear-gradient(135deg,rgba(${a},.15),rgba(${a},.05))`, border:`1px solid rgba(${a},.3)`, borderRadius:10, padding:20, textAlign:"center" }),
@@ -93,7 +113,7 @@ const S = {
   input:     { background:"rgba(255,255,255,.08)", border:"1px solid rgba(201,168,76,.3)", borderRadius:8, padding:"10px 14px", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, width:"100%", boxSizing:"border-box", marginBottom:10 },
   select:    { background:"#243447", border:"1px solid rgba(201,168,76,.3)", borderRadius:8, padding:"10px 14px", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, marginRight:8, cursor:"pointer" },
   textarea:  { background:"rgba(255,255,255,.08)", border:"1px solid rgba(201,168,76,.3)", borderRadius:8, padding:"10px 14px", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, width:"100%", boxSizing:"border-box", minHeight:120, resize:"vertical", marginBottom:10 },
-  secHead:   { fontSize:24, color:"#c9a84c", marginBottom:8, fontWeight:"bold" },
+  secHead:   { fontSize:"clamp(18px,4vw,24px)", color:"#c9a84c", marginBottom:8, fontWeight:"bold" },
   secSub:    { color:"#8faa9a", marginBottom:24, fontSize:14 },
   tag:       { display:"inline-block", background:"rgba(201,168,76,.15)", color:"#c9a84c", border:"1px solid rgba(201,168,76,.3)", padding:"2px 8px", borderRadius:4, fontSize:11, marginRight:4 },
   infoRow:   { display:"flex", alignItems:"flex-start", gap:8, marginBottom:6 },
@@ -326,7 +346,7 @@ function ExpandableContactForm({ neighbors, onSubmit }) {
           {/* Form fields — show for add always, or edit once neighbor selected */}
           {(mode === "add" || selected) && (
             <div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12, marginBottom:16 }}>
                 {[
                   { label:"Full Name / Family Name", field:"name",    ph:"e.g. The Smith Family",       required:true },
                   { label:"Street Address",           field:"address", ph:"e.g. 851 Saints Drive",       required:false },
@@ -522,7 +542,7 @@ const GOOGLE_SHEETS_CONFIG = {
       {boardUnlocked && showAdd && (
         <div style={S.card}>
           <div style={S.cardTitle}>➕ Add New Neighbor</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12 }}>
             {[
               {label:"Full Name / Family Name", field:"name",    ph:"e.g. The Smith Family"},
               {label:"Street Address",           field:"address", ph:"e.g. 113 Saint Andrews Dr"},
@@ -644,8 +664,8 @@ function Dashboard({ onNavigate }) {
   const quickLinks = [
     { icon:"👥", label:"Neighborhood Directory", desc:"Find your neighbors' contact info",          tab:"directory" },
     { icon:"🔨", label:"Contractors",            desc:"Community-recommended home service pros",    tab:"contractors" },
+    { icon:"🌳", label:"Architectural Change Request", desc:"Submit an Architectural Change Request", tab:"arc" },
     { icon:"📰", label:"Newsletter",             desc:"Read the latest community newsletter",       tab:"newsletter" },
-    { icon:"📋", label:"Meeting Minutes",        desc:"View HOA board meeting notes",               tab:"minutes" },
   ];
 
   return (
@@ -733,22 +753,6 @@ function Newsletter() {
   );
 }
 
-// ── MEETING MINUTES ────────────────────────────────────────────────────────────
-function MeetingMinutes() {
-  return (
-    <div>
-      <div style={S.secHead}>📋 Meeting Minutes</div>
-      <div style={S.secSub}>Board meeting records for Saint Andrews Park homeowners.</div>
-      <div style={{...S.card, textAlign:"center", padding:"60px 20px"}}>
-        <div style={{fontSize:64, marginBottom:20}}>📋</div>
-        <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:24, marginBottom:12}}>Coming Soon!</div>
-        <div style={{color:"#8faa9a", fontSize:15, lineHeight:1.8, maxWidth:400, margin:"0 auto"}}>
-          Meeting minutes will be posted here after each board meeting. Stay engaged with what's happening in your community! 🏡
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── CONTRACTORS DATA ──────────────────────────────────────────────────────────
 const CONTRACTOR_CATEGORIES = [
@@ -958,7 +962,7 @@ function Contractors() {
       {showAdd && (
         <div style={{ ...S.card, border:"1px solid rgba(201,168,76,.4)" }}>
           <div style={S.cardTitle}>➕ Add a Contractor</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12 }}>
             <div style={{ gridColumn:"1/-1" }}>
               <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Category</div>
               <select
@@ -1679,32 +1683,369 @@ function BoardTab() {
   );
 }
 
+// ── ARC REQUEST ──────────────────────────────────────────────────────────────
+function ARCRequest() {
+  const CHANGE_TYPES = [
+    "Fences",
+    "Landscaping",
+    "Recreational Equipment",
+    "Structural Addition or Modification",
+    "Tree Removal",
+    "Exterior Repainting",
+    "Decks, Pools, and Spas",
+    "Other",
+  ];
+
+  const blank = {
+    date: new Date().toLocaleDateString("en-US"),
+    name: "", address: "", city: "Marietta", state: "Georgia", zip: "30068",
+    phone: "", email: "",
+    changeTypes: [],
+    otherType: "",
+    description: "",
+  };
+  const MAX_FILES = 5;
+  const MAX_SIZE_MB = 10;
+
+  const [form, setForm]       = useState(blank);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted]   = useState(false);
+  const [error, setError]           = useState(null);
+  const [attachments, setAttachments] = useState([]);
+  const fileInputRef = useRef(null);
+
+  const upd = (field, val) => setForm(f => ({ ...f, [field]: val }));
+
+  const toggleType = (type) => {
+    setForm(f => ({
+      ...f,
+      changeTypes: f.changeTypes.includes(type)
+        ? f.changeTypes.filter(t => t !== type)
+        : [...f.changeTypes, type],
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.address.trim() || !form.description.trim()) {
+      setError("Please fill in Name, Address, and Description before submitting.");
+      return;
+    }
+    if (form.changeTypes.length === 0) {
+      setError("Please select at least one type of change.");
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+
+    const payload = {
+      action:      "submitARC",
+      date:        form.date,
+      name:        form.name,
+      address:     form.address,
+      city:        form.city,
+      state:       form.state,
+      zip:         form.zip,
+      phone:       form.phone,
+      email:       form.email,
+      changeTypes: form.changeTypes.join(", ") + (form.changeTypes.includes("Other") && form.otherType ? ` (${form.otherType})` : ""),
+      description:  form.description,
+      attachments:  attachments.length > 0 ? attachments.map(f => f.name).join(", ") : "None",
+      submitted:    new Date().toLocaleString(),
+      status:       "Pending Review",
+    };
+
+    try {
+      if (ARC_SCRIPT_URL === "YOUR_ARC_SCRIPT_URL_HERE") {
+        // Preview mode — simulate success
+        await new Promise(r => setTimeout(r, 800));
+      } else {
+        const p = new URLSearchParams(payload);
+        await fetch(`${ARC_SCRIPT_URL}?${p}`);
+      }
+      setSubmitted(true);
+      setForm(blank);
+    } catch {
+      setError("Submission failed. Please try again or contact the board directly.");
+    }
+    setSubmitting(false);
+  };
+
+  const inputStyle = {
+    width: "100%", padding: "9px 12px", borderRadius: 7,
+    background: "rgba(255,255,255,.07)", border: "1px solid rgba(201,168,76,.25)",
+    color: "#e8e0d0", fontFamily: "Georgia,serif", fontSize: 14,
+    outline: "none", boxSizing: "border-box",
+  };
+  const labelStyle = { color: "#c9a84c", fontSize: 12, fontWeight: "bold", marginBottom: 4, display: "block" };
+  const fieldWrap  = { marginBottom: 14 };
+
+  if (submitted) return (
+    <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center", padding: "60px 20px" }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
+      <div style={{ color: "#e8e0d0", fontSize: 22, fontWeight: "bold", marginBottom: 12 }}>
+        Request Submitted!
+      </div>
+      <div style={{ color: "#8faa9a", fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>
+        Your Architectural Change Request has been sent to the ARC Committee.<br/>
+        You will receive a written or electronic response <strong style={{color:"#c9a84c"}}>within 10 days</strong>.
+      </div>
+      <button style={S.btn} onClick={() => setSubmitted(false)}>Submit Another Request</button>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 780, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border: "2px solid rgba(201,168,76,.4)", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 40 }}>🌳</div>
+          <div>
+            <div style={{ ...S.secHead, marginBottom: 4 }}>Architectural Change Request</div>
+
+          </div>
+        </div>
+        <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(201,168,76,.08)", border: "1px solid rgba(201,168,76,.2)", borderRadius: 8, color: "#ccc5b5", fontSize: 13, lineHeight: 1.7 }}>
+          All sections of this form must be filled out completely. Upon receiving the Change Request, the HOA Board will review and send a written or electronic response. Requests will be reviewed and returned
+          <strong style={{color:"#c9a84c"}}> no later than 10 days</strong> after receipt by the committee.
+        </div>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{ marginBottom: 16, padding: "12px 16px", background: "rgba(224,92,92,.1)", border: "1px solid rgba(224,92,92,.3)", borderRadius: 8, color: "#e05c5c", fontSize: 13 }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
+
+        {/* ── Left column: Homeowner Info ── */}
+        <div style={S.card}>
+          <div style={{ ...S.cardTitle, marginBottom: 18 }}>👤 Homeowner Information</div>
+
+          <div style={fieldWrap}>
+            <label style={labelStyle}>Date</label>
+            <input style={inputStyle} value={form.date} onChange={e => upd("date", e.target.value)} />
+          </div>
+          <div style={fieldWrap}>
+            <label style={labelStyle}>Name *</label>
+            <input style={inputStyle} placeholder="Full name" value={form.name} onChange={e => upd("name", e.target.value)} />
+          </div>
+          <div style={fieldWrap}>
+            <label style={labelStyle}>Address *</label>
+            <input style={inputStyle} placeholder="Street address" value={form.address} onChange={e => upd("address", e.target.value)} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>City</label>
+              <input style={inputStyle} value={form.city} onChange={e => upd("city", e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>State</label>
+              <input style={inputStyle} value={form.state} onChange={e => upd("state", e.target.value)} />
+            </div>
+          </div>
+          <div style={fieldWrap}>
+            <label style={labelStyle}>Zip Code</label>
+            <input style={inputStyle} value={form.zip} onChange={e => upd("zip", e.target.value)} />
+          </div>
+          <div style={fieldWrap}>
+            <label style={labelStyle}>Phone</label>
+            <input style={inputStyle} placeholder="(770) 555-0100" value={form.phone} onChange={e => upd("phone", e.target.value)} />
+          </div>
+
+          <div style={fieldWrap}>
+            <label style={labelStyle}>E-Mail</label>
+            <input style={inputStyle} placeholder="your@email.com" value={form.email} onChange={e => upd("email", e.target.value)} />
+          </div>
+        </div>
+
+        {/* ── Right column: Change Types ── */}
+        <div style={S.card}>
+          <div style={{ ...S.cardTitle, marginBottom: 6 }}>📋 Type of Change</div>
+          <div style={{ color: "#8faa9a", fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
+            All changes checked below must include detailed descriptions in the area provided. Select all that apply.
+          </div>
+
+          {CHANGE_TYPES.map(type => (
+            <div key={type}
+              onClick={() => toggleType(type)}
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "10px 14px", borderRadius: 8, marginBottom: 8,
+                cursor: "pointer", userSelect: "none",
+                background: form.changeTypes.includes(type) ? "rgba(201,168,76,.12)" : "rgba(255,255,255,.04)",
+                border: form.changeTypes.includes(type) ? "1px solid rgba(201,168,76,.5)" : "1px solid rgba(255,255,255,.08)",
+                transition: "all .15s",
+              }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                border: form.changeTypes.includes(type) ? "2px solid #c9a84c" : "2px solid rgba(201,168,76,.3)",
+                background: form.changeTypes.includes(type) ? "#c9a84c" : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {form.changeTypes.includes(type) && <span style={{ color: "#1a2332", fontSize: 12, fontWeight: "bold", lineHeight: 1 }}>✓</span>}
+              </div>
+              <span style={{ color: form.changeTypes.includes(type) ? "#e8e0d0" : "#8faa9a", fontSize: 14 }}>{type}</span>
+            </div>
+          ))}
+
+          {form.changeTypes.includes("Other") && (
+            <div style={{ marginTop: 4, marginBottom: 8 }}>
+              <label style={labelStyle}>Please describe "Other"</label>
+              <input style={inputStyle} placeholder="Describe the change type..." value={form.otherType} onChange={e => upd("otherType", e.target.value)} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Description ── */}
+      <div style={{ ...S.card, marginTop: 20 }}>
+        <div style={{ ...S.cardTitle, marginBottom: 6 }}>📝 Detailed Change Request Description *</div>
+        <div style={{ color: "#8faa9a", fontSize: 12, marginBottom: 14, lineHeight: 1.6 }}>
+          Please include as specific information as possible such as materials, colors, dimensions, etc.
+          Include locations, drawings, pictures and descriptions to expedite the approval process.
+        </div>
+        <textarea
+          style={{ ...inputStyle, minHeight: 160, resize: "vertical", lineHeight: 1.6 }}
+          placeholder="Describe your planned change in detail..."
+          value={form.description}
+          onChange={e => upd("description", e.target.value)}
+        />
+      </div>
+
+      {/* ── Attachments ── */}
+      <div style={{ ...S.card, marginTop: 20 }}>
+        <div style={{ ...S.cardTitle, marginBottom: 6 }}>📎 Attachments <span style={{color:"#8faa9a",fontWeight:"normal",fontSize:13}}>(optional)</span></div>
+        <div style={{ color: "#8faa9a", fontSize: 12, marginBottom: 16, lineHeight: 1.6 }}>
+          Attach photos, drawings, or supporting documents to help expedite the approval process.
+          Up to {MAX_FILES} files, {MAX_SIZE_MB}MB each. Accepted: images, PDFs, Word docs.
+        </div>
+
+        {/* Drop zone */}
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor="#c9a84c"; e.currentTarget.style.background="rgba(201,168,76,.08)"; }}
+          onDragLeave={e => { e.currentTarget.style.borderColor="rgba(201,168,76,.25)"; e.currentTarget.style.background="rgba(255,255,255,.03)"; }}
+          onDrop={e => {
+            e.preventDefault();
+            e.currentTarget.style.borderColor="rgba(201,168,76,.25)";
+            e.currentTarget.style.background="rgba(255,255,255,.03)";
+            const dropped = Array.from(e.dataTransfer.files);
+            const valid = dropped.filter(f => f.size <= MAX_SIZE_MB * 1024 * 1024);
+            const combined = [...attachments, ...valid].slice(0, MAX_FILES);
+            setAttachments(combined);
+          }}
+          style={{
+            border: "2px dashed rgba(201,168,76,.25)", borderRadius: 10,
+            padding: "28px 20px", textAlign: "center", cursor: "pointer",
+            background: "rgba(255,255,255,.03)", transition: "all .2s",
+          }}
+        >
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📁</div>
+          <div style={{ color: "#e8e0d0", fontSize: 14, marginBottom: 4 }}>
+            Drag & drop files here, or <span style={{color:"#c9a84c",textDecoration:"underline"}}>browse</span>
+          </div>
+          <div style={{ color: "#8faa9a", fontSize: 12 }}>
+            Images, PDFs, Word docs · Max {MAX_SIZE_MB}MB per file · Up to {MAX_FILES} files
+          </div>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.doc,.docx"
+          style={{ display: "none" }}
+          onChange={e => {
+            const picked = Array.from(e.target.files).filter(f => f.size <= MAX_SIZE_MB * 1024 * 1024);
+            const combined = [...attachments, ...picked].slice(0, MAX_FILES);
+            setAttachments(combined);
+            e.target.value = "";
+          }}
+        />
+
+        {/* File list */}
+        {attachments.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            {attachments.map((file, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "10px 14px", borderRadius: 8, marginBottom: 8,
+                background: "rgba(255,255,255,.04)", border: "1px solid rgba(201,168,76,.15)",
+              }}>
+                <span style={{ fontSize: 20 }}>
+                  {file.type.startsWith("image/") ? "🖼️" : file.type === "application/pdf" ? "📄" : "📝"}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: "#e8e0d0", fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{file.name}</div>
+                  <div style={{ color: "#8faa9a", fontSize: 11 }}>{(file.size / 1024).toFixed(0)} KB</div>
+                </div>
+                <button
+                  onClick={() => setAttachments(attachments.filter((_, idx) => idx !== i))}
+                  style={{ background: "transparent", border: "none", color: "rgba(224,92,92,.5)", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 4 }}
+                  onMouseEnter={e => e.target.style.color="#e05c5c"}
+                  onMouseLeave={e => e.target.style.color="rgba(224,92,92,.5)"}
+                >×</button>
+              </div>
+            ))}
+            <div style={{ color: "#8faa9a", fontSize: 12, marginTop: 4 }}>
+              {attachments.length} of {MAX_FILES} files attached
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Submit ── */}
+      <div style={{ marginTop: 20, display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+        <button
+          style={{ ...S.btn, opacity: submitting ? .6 : 1, minWidth: 180 }}
+          onClick={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? "⏳ Submitting..." : "📬 Submit Request"}
+        </button>
+        <div style={{ color: "#8faa9a", fontSize: 12, lineHeight: 1.5 }}>
+          Your request will be reviewed by the HOA Board.<br/>
+          A response will be sent within 10 days of receipt.
+        </div>
+      </div>
+
+
+    </div>
+  );
+}
+
 // ── ROOT ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab,setTab]=useState("dashboard");
+  const isMobile = useIsMobile();
 
   const render=()=>{switch(tab){
     case"dashboard":   return <Dashboard onNavigate={setTab}/>;
     case"directory":   return <NeighborhoodDirectory/>;
     case"contractors": return <Contractors/>;
     case"newsletter":  return <Newsletter/>;
-    case"minutes":     return <MeetingMinutes/>;
+    case"arc":         return <ARCRequest/>;
     case"board":       return <BoardTab/>;
     default:           return null;
   }};
   return (
     <div style={S.app}>
-      <div style={S.header}>
+      <div style={{...S.header, padding: isMobile ? "12px 16px" : "20px 32px"}}>
         <div style={{display:"flex",alignItems:"center",gap:14}}>
           <div style={S.logoIcon}>⛳</div>
-          <div><div style={{...S.logoTitle, fontSize:26}}>Saint Andrews Park</div></div>
+          <div>
+            <div style={{...S.logoTitle, fontSize: isMobile ? 18 : 26}}>Saint Andrews Park</div>
+            {!isMobile && <div style={S.logoSub}>Homeowners Association</div>}
+          </div>
         </div>
-        <div style={S.badge}>COMMUNITY PORTAL</div>
+        {!isMobile && <div style={S.badge}>COMMUNITY PORTAL</div>}
       </div>
-      <div style={S.nav}>
+      <div style={{...S.nav, padding: isMobile ? "8px 12px" : "10px 16px"}}>
         {TABS.map(t=><button key={t.id} style={S.navBtn(tab===t.id)} onClick={()=>setTab(t.id)}>{t.label}</button>)}
       </div>
-      <div style={S.main}>{render()}</div>
+      <div style={{...S.main, padding: isMobile ? "16px 12px" : "32px"}}>{render()}</div>
     </div>
   );
 }
