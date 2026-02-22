@@ -2070,7 +2070,7 @@ const COVENANTS_DATA = [
 ];
 
 // ── BYLAWS COMPONENT ─────────────────────────────────────────────────────────
-const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_KEY || "";
+// AI assistant coming soon
 
 const SUGGESTED_QUESTIONS = [
   "Do I need approval to install a fence?",
