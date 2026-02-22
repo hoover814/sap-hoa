@@ -44,7 +44,7 @@ const BOARD_CONTENT_CONFIG = {
 };
 // Paste your Board Content Apps Script URL here after deploying
 const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBN_4H7Yt567wApGQAFXyxozFwysG2PpaKDiNOOLeo4lxCI4_qQeXzGwaDD0LH3kKP/exec";
-const ARC_SCRIPT_URL   = "https://script.google.com/macros/s/AKfycbyUGnXF4yPdPyKIDuKfKVeHuFRsgKDF7vdyv0fDjcos3XWDFqWcJJ20nh4EtNBasNo-/exec";
+const ARC_SCRIPT_URL   = "https://script.google.com/macros/s/AKfycbxEYB2-dlxJaz2YeZGkltkwgo43-LdpvNV1Vs0om7TLI9GRg2stBOJqALdNEIrv-8KZ/exec";
 // Paste your Directory Apps Script Web App URL here after deploying
 const DIRECTORY_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybEBISWuZwCrhQsEB5GGIfvmDwXT8YuJEzEeiddl-b1JGn0VRKkttp6BINeJkB8MCL/exec";
 
@@ -1725,6 +1725,14 @@ function ARCRequest() {
     }));
   };
 
+  // Convert a File object to base64
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   const handleSubmit = async () => {
     if (!form.name.trim() || !form.address.trim() || !form.description.trim()) {
       setError("Please fill in Name, Address, and Description before submitting.");
@@ -1737,7 +1745,7 @@ function ARCRequest() {
     setError(null);
     setSubmitting(true);
 
-    const payload = {
+    const fields = {
       action:      "submitARC",
       date:        form.date,
       name:        form.name,
@@ -1748,22 +1756,28 @@ function ARCRequest() {
       phone:       form.phone,
       email:       form.email,
       changeTypes: form.changeTypes.join(", ") + (form.changeTypes.includes("Other") && form.otherType ? ` (${form.otherType})` : ""),
-      description:  form.description,
-      attachments:  attachments.length > 0 ? attachments.map(f => f.name).join(", ") : "None",
-      submitted:    new Date().toLocaleString(),
-      status:       "Pending Review",
+      description: form.description,
+      submitted:   new Date().toLocaleString(),
     };
 
     try {
-      if (ARC_SCRIPT_URL === "YOUR_ARC_SCRIPT_URL_HERE") {
-        // Preview mode — simulate success
-        await new Promise(r => setTimeout(r, 800));
-      } else {
-        const p = new URLSearchParams(payload);
-        await fetch(`${ARC_SCRIPT_URL}?${p}`);
-      }
+      // Convert attachments to base64 for upload to Google Drive
+      const files = await Promise.all(
+        attachments.map(async file => ({
+          name:     file.name,
+          mimeType: file.type || "application/octet-stream",
+          data:     await fileToBase64(file),
+        }))
+      );
+
+      await fetch(ARC_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ fields, files }),
+      });
+
       setSubmitted(true);
       setForm(blank);
+      setAttachments([]);
     } catch {
       setError("Submission failed. Please try again or contact the board directly.");
     }
