@@ -41,6 +41,7 @@ const BOARD_CONTENT_CONFIG = {
   announcementsRange: "Announcements!A2:D",
   eventsRange:        "Events!A2:F",
   todoRange:          "TodoList!A2:F",
+  boardInfoRange:     "BoardInfo!A3:G10",
 };
 // Paste your Board Content Apps Script URL here after deploying
 const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBN_4H7Yt567wApGQAFXyxozFwysG2PpaKDiNOOLeo4lxCI4_qQeXzGwaDD0LH3kKP/exec";
@@ -1142,50 +1143,30 @@ function ContractorGrid({ items, catColor, onDelete }) {
 }
 
 // ── BOARD TAB ──────────────────────────────────────────────────────────────────
-const BYLAWS_BOT_SYSTEM = `You are a knowledgeable assistant helping the Saint Andrews Park HOA board understand their community covenants and restrictions.
 
-Your guidelines:
-- Be clear, concise, and always cite the specific Article and Section (e.g. "per Article 9, Section 10k...")
-- Tailor answers for board members who need to make or explain decisions
-- When relevant, note what authority the Board has vs. what requires ARC or homeowner vote
-- Flag when something may require legal counsel
-- Keep responses to 2-4 paragraphs max; use bullet points for lists
-- Never invent rules not found in the covenants
-
-SAINT ANDREWS PARK COVENANTS REFERENCE:
-
-ARTICLE 1 - DEFINITIONS: ARC=Architectural Review Committee; Board=Board of Directors; Common Benefit Area=shared community property; Owner=record homeowner; Residential Unit=single family home.
-
-ARTICLE 3 - MEMBERSHIP & VOTING: Every homeowner is automatically a member (Sec 2). One vote per unit (Sec 3). Board may suspend membership rights including voting for nonpayment (Sec 4).
-
-ARTICLE 5 - ASSESSMENTS: Three types: Initiation Fee ($100), Annual, Special (Sec 1). Annual assessments due Feb 1 (Sec 6a). Late fee: greater of $10 or 10% after 15 days (Sec 7b). Interest at 10%/yr on delinquent amounts (Sec 7b). Unpaid assessments are a lien on the property (Sec 7a). Board may suspend membership rights after 15 days nonpayment (Sec 7c). Board may levy special assessments for unexpected repairs or capital improvements (Sec 4). Budget requires 30-day notice to members; takes effect unless disapproved by 2/3 of owners (Sec 3a).
-
-ARTICLE 6 - ADMINISTRATION: Board responsible for all administration (Sec 1). Management agreements limited to 1-year terms (Sec 2). Books/records available for member inspection (Sec 4). Annual financial review required (Sec 5). Owners must notify Association of sale or lease (Sec 6).
-
-ARTICLE 7 - INSURANCE: Association must maintain: blanket property, general liability ($1M+ per occurrence), workers comp, directors/officers, and fidelity insurance covering 1/6 of annual assessments plus reserves (Sec 1). Each owner must carry full replacement cost property insurance (Sec 2).
-
-ARTICLE 8 - ARCHITECTURAL STANDARDS (ARC): No exterior structure, improvement, or landscaping change without ARC approval (Sec 1). Interior remodeling does NOT require approval. Screened porches/patios visible from outside DO require approval. Repainting in original color does NOT require approval. ARC has 45 days to respond — silence = deemed approved (Sec 2). Work must complete within 1 year of approval. ARC may charge fees for review. ARC can withhold approval for any reason including aesthetic. No waiver: past approvals don't obligate future ones (Sec 3). Variances allowed for hardship/topography (Sec 4). Board members may enter Residential Units at reasonable hours with notice to verify compliance (Sec 2).
-
-ARTICLE 9 - USE RESTRICTIONS: Residential only; businesses need Board written approval (Sec 2). No signs without ARC consent; For Sale/Rent signs OK up to 36x48 inches (Sec 3). Vehicles must be in garage; garage doors kept closed; no unlicensed vehicles >5 days; no boats/RVs/trailers outside garage >24 hours (Sec 4). Pets: dogs, cats, common household pets in reasonable number; no commercial breeding (Sec 7). No noxious/offensive activity (Sec 8). PROHIBITED without ARC approval: exterior antennas/satellite dishes (10a), tree removal of trees >6 inches diameter or any flowering trees (10b), window AC units (10c), non-standard exterior lighting (10d), artificial vegetation/sculpture/fountains/flags/basketball goals/planters (10e), solar panels unless harmonious per ARC (10f), clotheslines (10g), window bars/security doors (10h), overhead utility lines (10i), underground storage tanks (10j), fences without ARC consent and must be behind rear 1/3 of home (10k). Garbage/woodpiles must be screened from street (Sec 13). No lot subdivision without ARC approval (Sec 14). No firearms including BB/pellet guns (Sec 15). Mailboxes must be ARC-approved style (Sec 16). Exterior color changes require ARC approval (Sec 17). Swimming pools/hot tubs/spas require ARC consent AND approved fence enclosure (Sec 19). Owner responsible for all maintenance of their unit; Board may perform at owner expense with 10-day written notice (Sec 22).
-
-ARTICLE 12 - MISCELLANEOUS: Covenants run perpetually with the land (Sec 1). Declaration amended by 2/3 Board vote OR 2/3 Owner vote (Sec 4). Board may impose fines; Association may seek injunctive relief (Sec 6). Each owner and occupant must comply strictly with all rules (Sec 6).`;
 
 function BoardTab() {
   const [unlocked, setUnlocked]   = useState(false);
   const [pwInput, setPwInput]     = useState("");
   const [pwError, setPwError]     = useState(false);
   const [activeSection, setActiveSection] = useState("announcements");
+  const [boardMembers, setBoardMembers]   = useState([]);
+
+  useEffect(() => {
+    fetchBoardContent(BOARD_CONTENT_CONFIG.boardInfoRange)
+      .then(rows => setBoardMembers(rows
+        .filter(r => r[6] === "Active")
+        .map(r => ({ role: r[0]||"", name: r[1]||"", email: r[2]||"", phone: r[3]||"", bio: r[4]||"", photo: r[5]||"" }))
+      ))
+      .catch(() => {});
+  }, []);
 
   // Announcements state
   const [announcements, setAnnouncements] = useState([]);
   const [newAnn, setNewAnn]   = useState({ title:"", message:"" });
   const [annMsg, setAnnMsg]   = useState(null);
 
-  // Bylaws Bot state
-  const [botMessages, setBotMessages] = useState([]);
-  const [botInput, setBotInput]       = useState("");
-  const [botLoading, setBotLoading]   = useState(false);
-  const botEndRef                     = useRef(null);
+
 
   // To Do state
   const [todos, setTodos]         = useState([]);
@@ -1386,6 +1367,73 @@ function BoardTab() {
     }}>{msg.text}</div>
   ) : null;
 
+      {/* ── MEET THE BOARD ── */}
+      <div style={{marginBottom:32}}>
+        <div style={{...S.secHead, marginBottom:4}}>Meet Your Board</div>
+        <div style={{...S.secSub, marginBottom:20}}>Your Saint Andrews Park HOA is run by volunteer homeowners who live right here in the community.</div>
+        {boardMembers.length === 0 ? (
+          <div style={{...S.card, textAlign:"center", color:"#8faa9a", fontSize:14, padding:"30px 20px"}}>
+            Board member info coming soon! 🏡
+          </div>
+        ) : (
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16}}>
+            {boardMembers.map((m, i) => {
+              const icons = {"President":"👑","Vice President":"🏛️","Treasurer":"💰","Secretary":"📋"};
+              const icon = icons[m.role] || "🏡";
+              return (
+                <div key={i} style={{...S.card, marginBottom:0, textAlign:"center", padding:"24px 20px"}}>
+                  {/* Avatar */}
+                  <div style={{width:72, height:72, borderRadius:"50%", margin:"0 auto 14px",
+                    background:"linear-gradient(135deg,#c9a84c,#e8cc80)",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:32, border:"3px solid rgba(201,168,76,.3)",
+                    overflow:"hidden"
+                  }}>
+                    {m.photo
+                      ? <img src={m.photo} alt={m.name} style={{width:"100%", height:"100%", objectFit:"cover"}} />
+                      : icon}
+                  </div>
+                  {/* Role badge */}
+                  <div style={{...S.pill("rgba(201,168,76,.2)"), color:"#c9a84c", fontSize:11,
+                    display:"inline-block", marginBottom:8, padding:"4px 12px", borderRadius:20,
+                    border:"1px solid rgba(201,168,76,.3)", fontWeight:"bold", letterSpacing:.5
+                  }}>{m.role}</div>
+                  {/* Name */}
+                  <div style={{color:"#e8e0d0", fontFamily:"Georgia,serif", fontWeight:"bold",
+                    fontSize:16, marginBottom:6, lineHeight:1.3}}>
+                    {m.name || "Board Member"}
+                  </div>
+                  {/* Bio */}
+                  {m.bio && (
+                    <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.7, marginBottom:12,
+                      textAlign:"left"}}>
+                      {m.bio}
+                    </div>
+                  )}
+                  {/* Contact */}
+                  <div style={{display:"flex", flexDirection:"column", gap:6, marginTop:"auto"}}>
+                    {m.email && (
+                      <a href={`mailto:${m.email}`} style={{color:"#c9a84c", fontSize:12,
+                        textDecoration:"none", display:"flex", alignItems:"center",
+                        justifyContent:"center", gap:6}}>
+                        ✉️ {m.email}
+                      </a>
+                    )}
+                    {m.phone && (
+                      <a href={`tel:${m.phone}`} style={{color:"#8faa9a", fontSize:12,
+                        textDecoration:"none", display:"flex", alignItems:"center",
+                        justifyContent:"center", gap:6}}>
+                        📞 {m.phone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
   if (!unlocked) return (
     <div>
       <div style={S.secHead}>🔒 Board Portal</div>
@@ -1422,7 +1470,7 @@ function BoardTab() {
 
       {/* Section switcher */}
       <div style={{display:"flex", gap:8, marginBottom:24, flexWrap:"wrap"}}>
-        {[{id:"announcements",label:"📣 Announcements"},{id:"events",label:"📅 Events"},{id:"todo",label:"✅ To Do List"},{id:"bylawsbot",label:"📜 Bylaws Bot"}].map(s=>(
+        {[{id:"announcements",label:"📣 Announcements"},{id:"events",label:"📅 Events"},{id:"todo",label:"✅ To Do List"}].map(s=>(
           <button key={s.id} onClick={()=>setActiveSection(s.id)} style={{
             padding:"10px 20px", borderRadius:8, cursor:"pointer",
             fontFamily:"Georgia,serif", fontSize:14, fontWeight:"bold",
@@ -1716,158 +1764,6 @@ function BoardTab() {
         </div>
       )}
 
-      {/* ── BYLAWS BOT SECTION ── */}
-      {activeSection === "bylawsbot" && (
-        <div>
-          <div style={{...S.card, background:"linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border:"2px solid rgba(201,168,76,.3)", marginBottom:20}}>
-            <div style={{display:"flex", gap:14, alignItems:"center"}}>
-              <div style={{fontSize:36}}>📜</div>
-              <div>
-                <div style={{...S.cardTitle, marginBottom:4}}>Bylaws Assistant</div>
-                <div style={{color:"#8faa9a", fontSize:13, lineHeight:1.6}}>
-                  Ask questions about the SAP covenants and get plain-English answers with article & section citations. 
-                  <span style={{color:"#c9a84c"}}> Board use only — not legal advice.</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Suggested questions */}
-          {botMessages.length === 0 && (
-            <div style={{...S.card, marginBottom:16}}>
-              <div style={{color:"#8faa9a", fontSize:12, marginBottom:10, textTransform:"uppercase", letterSpacing:1}}>Quick Questions for the Board</div>
-              <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
-                {[
-                  "What is the process for enforcing a covenant violation?",
-                  "Can the board levy fines for violations?",
-                  "What vote is required to amend the declaration?",
-                  "What are the ARC approval timelines?",
-                  "What can the board do if assessments go unpaid?",
-                  "What insurance is the HOA required to maintain?",
-                  "Can the board approve a business operating from a home?",
-                  "What notice is required before annual assessments?",
-                ].map(q => (
-                  <button key={q} onClick={async () => {
-                    setBotMessages(prev => [...prev, {role:"user", text:q}]);
-                    setBotLoading(true);
-                    try {
-                      const res = await fetch("https://api.anthropic.com/v1/messages", {
-                        method:"POST",
-                        headers:{"Content-Type":"application/json"},
-                        body: JSON.stringify({
-                          model:"claude-sonnet-4-20250514",
-                          max_tokens:1000,
-                          system: BYLAWS_BOT_SYSTEM,
-                          messages:[{role:"user", content:q}],
-                        }),
-                      });
-                      const data = await res.json();
-                      setBotMessages(prev => [...prev, {role:"assistant", text: data.content?.[0]?.text || "Sorry, I could not generate a response."}]);
-                    } catch { setBotMessages(prev => [...prev, {role:"assistant", text:"Connection error. Please try again."}]); }
-                    setBotLoading(false);
-                  }} style={{
-                    background:"rgba(201,168,76,.08)", border:"1px solid rgba(201,168,76,.2)",
-                    color:"#c9a84c", borderRadius:20, padding:"6px 14px",
-                    fontSize:12, cursor:"pointer", fontFamily:"Georgia,serif",
-                  }}>{q}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Chat window */}
-          {botMessages.length > 0 && (
-            <div style={{...S.card, marginBottom:16, maxHeight:500, overflowY:"auto"}}>
-              {botMessages.map((m, i) => (
-                <div key={i} style={{display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start", marginBottom:14}}>
-                  {m.role==="assistant" && (
-                    <div style={{width:28,height:28,borderRadius:"50%",background:"linear-gradient(135deg,#c9a84c,#e8cc80)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginRight:10,marginTop:2}}>📜</div>
-                  )}
-                  <div style={{
-                    maxWidth:"78%", padding:"10px 14px",
-                    borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                    background:   m.role==="user" ? "rgba(201,168,76,.12)" : "rgba(255,255,255,.06)",
-                    border:       m.role==="user" ? "1px solid rgba(201,168,76,.3)" : "1px solid rgba(255,255,255,.1)",
-                    color:"#e8e0d0", fontSize:13, lineHeight:1.8, whiteSpace:"pre-wrap",
-                  }}>{m.text}</div>
-                </div>
-              ))}
-              {botLoading && (
-                <div style={{display:"flex", alignItems:"center", gap:10, color:"#8faa9a", fontSize:13}}>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:"linear-gradient(135deg,#c9a84c,#e8cc80)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>📜</div>
-                  <span>Looking that up...</span>
-                </div>
-              )}
-              <div ref={botEndRef} />
-            </div>
-          )}
-
-          {/* Input */}
-          <div style={{...S.card}}>
-            <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-              <input
-                style={{flex:1, padding:"11px 16px", borderRadius:8, background:"rgba(255,255,255,.07)", border:"1px solid rgba(201,168,76,.3)", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, outline:"none", minWidth:200}}
-                placeholder="Ask about enforcement, voting, assessments, ARC rules..."
-                value={botInput}
-                onChange={e => setBotInput(e.target.value)}
-                disabled={botLoading}
-                onKeyDown={async e => {
-                  if (e.key !== "Enter" || !botInput.trim() || botLoading) return;
-                  const q = botInput.trim();
-                  setBotInput("");
-                  setBotMessages(prev => [...prev, {role:"user", text:q}]);
-                  setBotLoading(true);
-                  try {
-                    const res = await fetch("https://api.anthropic.com/v1/messages", {
-                      method:"POST",
-                      headers:{"Content-Type":"application/json"},
-                      body: JSON.stringify({
-                        model:"claude-sonnet-4-20250514",
-                        max_tokens:1000,
-                        system: BYLAWS_BOT_SYSTEM,
-                        messages:[...botMessages, {role:"user", content:q}].map(m=>({role:m.role,content:m.text})),
-                      }),
-                    });
-                    const data = await res.json();
-                    setBotMessages(prev => [...prev, {role:"assistant", text: data.content?.[0]?.text || "Sorry, I could not generate a response."}]);
-                  } catch { setBotMessages(prev => [...prev, {role:"assistant", text:"Connection error. Please try again."}]); }
-                  setBotLoading(false);
-                  setTimeout(() => botEndRef.current?.scrollIntoView({behavior:"smooth"}), 100);
-                }}
-              />
-              <button style={{...S.btn, opacity: botLoading ? .6 : 1}} disabled={botLoading} onClick={async () => {
-                if (!botInput.trim() || botLoading) return;
-                const q = botInput.trim();
-                setBotInput("");
-                setBotMessages(prev => [...prev, {role:"user", text:q}]);
-                setBotLoading(true);
-                try {
-                  const res = await fetch("https://api.anthropic.com/v1/messages", {
-                    method:"POST",
-                    headers:{"Content-Type":"application/json"},
-                    body: JSON.stringify({
-                      model:"claude-sonnet-4-20250514",
-                      max_tokens:1000,
-                      system: BYLAWS_BOT_SYSTEM,
-                      messages:[...botMessages, {role:"user", content:q}].map(m=>({role:m.role,content:m.text})),
-                    }),
-                  });
-                  const data = await res.json();
-                  setBotMessages(prev => [...prev, {role:"assistant", text: data.content?.[0]?.text || "Sorry, I could not generate a response."}]);
-                } catch { setBotMessages(prev => [...prev, {role:"assistant", text:"Connection error. Please try again."}]); }
-                setBotLoading(false);
-                setTimeout(() => botEndRef.current?.scrollIntoView({behavior:"smooth"}), 100);
-              }}>Ask →</button>
-              {botMessages.length > 0 && (
-                <button style={{...S.btnOut, fontSize:13, padding:"10px 16px"}} onClick={() => setBotMessages([])}>Clear</button>
-              )}
-            </div>
-            <div style={{marginTop:12, color:"#8faa9a", fontSize:11, fontStyle:"italic"}}>
-              ⚠️ For board reference only. Not legal advice — consult an attorney for official interpretations.
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -2070,63 +1966,15 @@ const COVENANTS_DATA = [
 ];
 
 // ── BYLAWS COMPONENT ─────────────────────────────────────────────────────────
-// AI assistant coming soon
-
-const SUGGESTED_QUESTIONS = [
-  "Do I need approval to install a fence?",
-  "What are the rules about tree removal?",
-  "Can I run a business from my home?",
-  "What happens if I don't pay my HOA dues?",
-  "Do I need approval to paint my house a new color?",
-  "Are satellite dishes allowed?",
-  "What are the pet rules?",
-  "Do I need approval to install a pool or hot tub?",
-];
-
+// ── BYLAWS COMPONENT ─────────────────────────────────────────────────────────
 function Bylaws() {
-  const [query, setQuery]       = useState("");
-  const [openArticle, setOpen]  = useState(null);
-  const [pdfOpen, setPdfOpen]   = useState(false);
-  const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [aiLoading, setAiLoading] = useState(false);
-  const chatEndRef              = useRef(null);
+  const [query, setQuery]      = useState("");
+  const [openArticle, setOpen] = useState(null);
+  const [pdfOpen, setPdfOpen]  = useState(false);
   const PDF_URL = "/Saint_Andrews_Park_Neighborhood_Covenants.pdf";
-
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
-
-  const askQuestion = async (q) => {
-    const text = q || question.trim();
-    if (!text || aiLoading) return;
-    setQuestion("");
-    setMessages(prev => [...prev, { role:"user", text }]);
-    setAiLoading(true);
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type":"application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are a friendly assistant for the Saint Andrews Park HOA in Marietta, Georgia. Help homeowners understand their covenants and restrictions. Be warm and use plain English. Always cite the specific Article and Section (e.g. "per Article 9, Section 10k..."). If something requires ARC approval, mention they can submit an ACR form through the portal. Keep answers concise — 2-4 short paragraphs. If unsure, recommend contacting the board. Never make up rules not in the covenants.
-
-Here are the SAP Covenants:
-${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections })))}`,
-          messages: [{ role:"user", content: text }],
-        }),
-      });
-      const data = await res.json();
-      const reply = data.content?.[0]?.text || "I couldn't generate a response. Please try again.";
-      setMessages(prev => [...prev, { role:"assistant", text: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role:"assistant", text:"Having trouble connecting right now. Please try again or contact the board directly." }]);
-    }
-    setAiLoading(false);
-  };
 
   const q = query.toLowerCase().trim();
 
-  // Highlight matching text
   const highlight = (text) => {
     if (!q || q.length < 2) return text;
     const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")})`, "gi"));
@@ -2137,7 +1985,6 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
     );
   };
 
-  // Filter articles/sections that match query
   const filtered = COVENANTS_DATA.map(article => {
     if (!q || q.length < 2) return { ...article, show: true, matchCount: 0 };
     const titleMatch = article.title.toLowerCase().includes(q);
@@ -2152,10 +1999,10 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
   const hasQuery = q.length >= 2;
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto" }}>
+    <div style={{ maxWidth:860, margin:"0 auto" }}>
 
-      {/* Header card */}
-      <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border: "2px solid rgba(201,168,76,.4)", marginBottom: 24 }}>
+      {/* Header */}
+      <div style={{ ...S.card, background:"linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border:"2px solid rgba(201,168,76,.4)", marginBottom:24 }}>
         <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
           <div style={{ fontSize:40 }}>📜</div>
           <div style={{ flex:1 }}>
@@ -2174,14 +2021,14 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
         </div>
       </div>
 
-      {/* PDF viewer */}
+      {/* PDF Viewer */}
       {pdfOpen && (
         <div style={{ ...S.card, padding:0, overflow:"hidden", marginBottom:24 }}>
           <iframe src={PDF_URL} style={{ width:"100%", height:600, border:"none", display:"block" }} title="SAP Covenants" />
         </div>
       )}
 
-      {/* Search bar */}
+      {/* Search */}
       <div style={{ ...S.card, marginBottom:20 }}>
         <div style={{ ...S.cardTitle, marginBottom:12 }}>🔍 Search the Covenants</div>
         <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
@@ -2200,12 +2047,10 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
         {hasQuery && (
           <div style={{ marginTop:10, color: totalMatches > 0 ? "#8faa9a" : "#c9a84c", fontSize:13 }}>
             {totalMatches > 0
-              ? `✅ Found ${totalMatches} matching section${totalMatches !== 1 ? "s" : ""} across ${filtered.filter(a=>a.show && a.matchCount > 0).length} article${filtered.filter(a=>a.show && a.matchCount > 0).length !== 1 ? "s" : ""}`
+              ? `✅ Found ${totalMatches} matching section${totalMatches !== 1 ? "s" : ""} across ${filtered.filter(a=>a.show && a.matchCount>0).length} article${filtered.filter(a=>a.show && a.matchCount>0).length !== 1 ? "s" : ""}`
               : `No matches found for "${query}" — try a different keyword`}
           </div>
         )}
-
-        {/* Quick search chips */}
         {!hasQuery && (
           <div style={{ marginTop:14 }}>
             <div style={{ color:"#8faa9a", fontSize:11, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>Quick Searches</div>
@@ -2221,20 +2066,17 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
         )}
       </div>
 
-      {/* Article list */}
+      {/* Articles */}
       {filtered.filter(a => !hasQuery || a.show).map((article) => {
         const isOpen = openArticle === article.id || (hasQuery && article.matchCount > 0);
         const displaySections = hasQuery ? article.matchingSections : article.sections;
-
         return (
           <div key={article.id} style={{ ...S.card, marginBottom:12, padding:0, overflow:"hidden" }}>
-            {/* Article header — clickable */}
             <div
               onClick={() => setOpen(isOpen && !hasQuery ? null : article.id)}
               style={{ padding:"16px 20px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between",
                 background: isOpen ? "rgba(201,168,76,.07)" : "transparent",
-                borderBottom: isOpen ? "1px solid rgba(201,168,76,.15)" : "none",
-                transition:"background .15s" }}
+                borderBottom: isOpen ? "1px solid rgba(201,168,76,.15)" : "none" }}
               onMouseEnter={e => e.currentTarget.style.background = "rgba(201,168,76,.07)"}
               onMouseLeave={e => e.currentTarget.style.background = isOpen ? "rgba(201,168,76,.07)" : "transparent"}
             >
@@ -2248,12 +2090,8 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
                   </div>
                 )}
               </div>
-              <div style={{ color:"#c9a84c", fontSize:18, transition:"transform .2s", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
-                ⌄
-              </div>
+              <div style={{ color:"#c9a84c", fontSize:18, transition:"transform .2s", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</div>
             </div>
-
-            {/* Sections */}
             {isOpen && displaySections && displaySections.map((sec, si) => (
               <div key={si} style={{ padding:"14px 20px", borderBottom:"1px solid rgba(255,255,255,.05)" }}>
                 {sec.title && (
@@ -2270,73 +2108,6 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
         );
       })}
 
-      {/* AI Assistant */}
-      {ANTHROPIC_KEY && (
-        <div style={{ ...S.card, marginTop:8 }}>
-          <div style={{ ...S.cardTitle, marginBottom:4 }}>🤖 Ask the Bylaws Assistant</div>
-          <div style={{ color:"#8faa9a", fontSize:13, marginBottom:16, lineHeight:1.6 }}>
-            Ask a plain-English question about our covenants and get an answer with specific article references.
-            <span style={{ color:"#c9a84c" }}> Not legal advice — contact the board for official matters.</span>
-          </div>
-
-          {messages.length === 0 && (
-            <div style={{ marginBottom:16 }}>
-              <div style={{ color:"#8faa9a", fontSize:11, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>Common Questions</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-                {SUGGESTED_QUESTIONS.map(q => (
-                  <button key={q} onClick={() => askQuestion(q)}
-                    style={{ background:"rgba(201,168,76,.08)", border:"1px solid rgba(201,168,76,.25)", color:"#c9a84c", borderRadius:20, padding:"6px 14px", fontSize:12, cursor:"pointer", fontFamily:"Georgia,serif" }}>
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.length > 0 && (
-            <div style={{ marginBottom:14, maxHeight:400, overflowY:"auto" }}>
-              {messages.map((m, i) => (
-                <div key={i} style={{ display:"flex", justifyContent: m.role==="user" ? "flex-end" : "flex-start", marginBottom:12 }}>
-                  {m.role === "assistant" && (
-                    <div style={{ width:26, height:26, borderRadius:"50%", background:"linear-gradient(135deg,#c9a84c,#e8cc80)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0, marginRight:8, marginTop:2 }}>📜</div>
-                  )}
-                  <div style={{ maxWidth:"78%", padding:"10px 14px", borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                    background: m.role==="user" ? "rgba(201,168,76,.15)" : "rgba(255,255,255,.06)",
-                    border: m.role==="user" ? "1px solid rgba(201,168,76,.3)" : "1px solid rgba(255,255,255,.1)",
-                    color:"#e8e0d0", fontSize:13, lineHeight:1.7, whiteSpace:"pre-wrap" }}>
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-              {aiLoading && (
-                <div style={{ display:"flex", alignItems:"center", gap:10, color:"#8faa9a", fontSize:13 }}>
-                  <div style={{ width:26, height:26, borderRadius:"50%", background:"linear-gradient(135deg,#c9a84c,#e8cc80)", display:"flex", alignItems:"center", justifyContent:"center" }}>📜</div>
-                  <span>Looking that up for you...</span>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-          )}
-
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-            <input
-              style={{ flex:1, padding:"10px 14px", borderRadius:8, background:"rgba(255,255,255,.07)", border:"1px solid rgba(201,168,76,.3)", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:13, outline:"none", minWidth:180 }}
-              placeholder="Ask about fences, pets, vehicles, assessments..."
-              value={question}
-              onChange={e => setQuestion(e.target.value)}
-              onKeyDown={e => e.key==="Enter" && askQuestion()}
-              disabled={aiLoading}
-            />
-            <button style={{ ...S.btn, opacity: aiLoading ? .6 : 1 }} onClick={() => askQuestion()} disabled={aiLoading}>
-              Ask →
-            </button>
-            {messages.length > 0 && (
-              <button style={{ ...S.btnOut, fontSize:12, padding:"8px 14px" }} onClick={() => setMessages([])}>Clear</button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Disclaimer */}
       <div style={{ ...S.card, marginTop:8 }}>
         <div style={{ color:"#8faa9a", fontSize:11, fontStyle:"italic", textAlign:"center" }}>
@@ -2347,6 +2118,7 @@ ${JSON.stringify(COVENANTS_DATA.map(a => ({ title: a.title, sections: a.sections
     </div>
   );
 }
+
 
 // ── ARC REQUEST ──────────────────────────────────────────────────────────────
 function ARCRequest() {
