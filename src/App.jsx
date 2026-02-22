@@ -1155,7 +1155,7 @@ function BoardTab() {
   useEffect(() => {
     fetchBoardContent(BOARD_CONTENT_CONFIG.boardInfoRange)
       .then(rows => setBoardMembers(rows
-        .filter(r => r[6] === "Active")
+        .filter(r => r[5] === "Active")
         .map(r => ({ role: r[0]||"", name: r[1]||"", email: r[2]||"", phone: r[3]||"", photo: r[4]||"" }))
       ))
       .catch(() => {});
