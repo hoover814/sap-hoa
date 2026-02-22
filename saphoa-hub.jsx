@@ -569,7 +569,7 @@ const GOOGLE_SHEETS_CONFIG = {
 
       {/* Card grid */}
       {!loading && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:16, marginTop:8 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:16, marginTop:8 }}>
           {filtered.map((n,idx) => (
             <div key={n.id}
               style={{
@@ -2002,7 +2002,7 @@ function Bylaws() {
   const [query, setQuery]      = useState("");
   const [openArticle, setOpen] = useState(null);
   const [pdfOpen, setPdfOpen]  = useState(false);
-  const PDF_URL = "/sap-hoa/Saint_Andrews_Park_Neighborhood_Covenants.pdf";
+  const PDF_URL = "/Saint_Andrews_Park_Neighborhood_Covenants.pdf";
 
   const q = query.toLowerCase().trim();
 
