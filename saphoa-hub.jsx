@@ -1367,6 +1367,8 @@ function BoardTab() {
     }}>{msg.text}</div>
   ) : null;
 
+  if (!unlocked) return (
+    <div>
       {/* ── MEET THE BOARD ── */}
       <div style={{marginBottom:32}}>
         <div style={{...S.secHead, marginBottom:4}}>Meet Your Board</div>
@@ -1376,53 +1378,39 @@ function BoardTab() {
             Board member info coming soon! 🏡
           </div>
         ) : (
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16}}>
             {boardMembers.map((m, i) => {
               const icons = {"President":"👑","Vice President":"🏛️","Treasurer":"💰","Secretary":"📋"};
               const icon = icons[m.role] || "🏡";
               return (
                 <div key={i} style={{...S.card, marginBottom:0, textAlign:"center", padding:"24px 20px"}}>
-                  {/* Avatar */}
                   <div style={{width:72, height:72, borderRadius:"50%", margin:"0 auto 14px",
                     background:"linear-gradient(135deg,#c9a84c,#e8cc80)",
                     display:"flex", alignItems:"center", justifyContent:"center",
-                    fontSize:32, border:"3px solid rgba(201,168,76,.3)",
-                    overflow:"hidden"
-                  }}>
-                    {m.photo
-                      ? <img src={m.photo} alt={m.name} style={{width:"100%", height:"100%", objectFit:"cover"}} />
-                      : icon}
+                    fontSize:32, border:"3px solid rgba(201,168,76,.3)", overflow:"hidden"}}>
+                    {m.photo ? <img src={m.photo} alt={m.name} style={{width:"100%",height:"100%",objectFit:"cover"}} /> : icon}
                   </div>
-                  {/* Role badge */}
-                  <div style={{...S.pill("rgba(201,168,76,.2)"), color:"#c9a84c", fontSize:11,
+                  <div style={{background:"rgba(201,168,76,.12)", color:"#c9a84c", fontSize:11,
                     display:"inline-block", marginBottom:8, padding:"4px 12px", borderRadius:20,
                     border:"1px solid rgba(201,168,76,.3)", fontWeight:"bold", letterSpacing:.5
                   }}>{m.role}</div>
-                  {/* Name */}
                   <div style={{color:"#e8e0d0", fontFamily:"Georgia,serif", fontWeight:"bold",
                     fontSize:16, marginBottom:6, lineHeight:1.3}}>
                     {m.name || "Board Member"}
                   </div>
-                  {/* Bio */}
                   {m.bio && (
-                    <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.7, marginBottom:12,
-                      textAlign:"left"}}>
+                    <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.7, marginBottom:12, textAlign:"left"}}>
                       {m.bio}
                     </div>
                   )}
-                  {/* Contact */}
-                  <div style={{display:"flex", flexDirection:"column", gap:6, marginTop:"auto"}}>
+                  <div style={{display:"flex", flexDirection:"column", gap:6}}>
                     {m.email && (
-                      <a href={`mailto:${m.email}`} style={{color:"#c9a84c", fontSize:12,
-                        textDecoration:"none", display:"flex", alignItems:"center",
-                        justifyContent:"center", gap:6}}>
+                      <a href={`mailto:${m.email}`} style={{color:"#c9a84c", fontSize:12, textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center", gap:6}}>
                         ✉️ {m.email}
                       </a>
                     )}
                     {m.phone && (
-                      <a href={`tel:${m.phone}`} style={{color:"#8faa9a", fontSize:12,
-                        textDecoration:"none", display:"flex", alignItems:"center",
-                        justifyContent:"center", gap:6}}>
+                      <a href={`tel:${m.phone}`} style={{color:"#8faa9a", fontSize:12, textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center", gap:6}}>
                         📞 {m.phone}
                       </a>
                     )}
@@ -1434,8 +1422,6 @@ function BoardTab() {
         )}
       </div>
 
-  if (!unlocked) return (
-    <div>
       <div style={S.secHead}>🔒 Board Portal</div>
       <div style={S.secSub}>This area is for Saint Andrews Park board members only.</div>
       <div style={{...S.card, maxWidth:400, margin:"40px auto", textAlign:"center"}}>
@@ -1457,6 +1443,59 @@ function BoardTab() {
 
   return (
     <div>
+      {/* ── MEET THE BOARD ── */}
+      <div style={{marginBottom:32}}>
+        <div style={{...S.secHead, marginBottom:4}}>Meet Your Board</div>
+        <div style={{...S.secSub, marginBottom:20}}>Your Saint Andrews Park HOA is run by volunteer homeowners who live right here in the community.</div>
+        {boardMembers.length === 0 ? (
+          <div style={{...S.card, textAlign:"center", color:"#8faa9a", fontSize:14, padding:"30px 20px"}}>
+            Board member info coming soon! 🏡
+          </div>
+        ) : (
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16}}>
+            {boardMembers.map((m, i) => {
+              const icons = {"President":"👑","Vice President":"🏛️","Treasurer":"💰","Secretary":"📋"};
+              const icon = icons[m.role] || "🏡";
+              return (
+                <div key={i} style={{...S.card, marginBottom:0, textAlign:"center", padding:"24px 20px"}}>
+                  <div style={{width:72, height:72, borderRadius:"50%", margin:"0 auto 14px",
+                    background:"linear-gradient(135deg,#c9a84c,#e8cc80)",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:32, border:"3px solid rgba(201,168,76,.3)", overflow:"hidden"}}>
+                    {m.photo ? <img src={m.photo} alt={m.name} style={{width:"100%",height:"100%",objectFit:"cover"}} /> : icon}
+                  </div>
+                  <div style={{background:"rgba(201,168,76,.12)", color:"#c9a84c", fontSize:11,
+                    display:"inline-block", marginBottom:8, padding:"4px 12px", borderRadius:20,
+                    border:"1px solid rgba(201,168,76,.3)", fontWeight:"bold", letterSpacing:.5
+                  }}>{m.role}</div>
+                  <div style={{color:"#e8e0d0", fontFamily:"Georgia,serif", fontWeight:"bold",
+                    fontSize:16, marginBottom:6, lineHeight:1.3}}>
+                    {m.name || "Board Member"}
+                  </div>
+                  {m.bio && (
+                    <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.7, marginBottom:12, textAlign:"left"}}>
+                      {m.bio}
+                    </div>
+                  )}
+                  <div style={{display:"flex", flexDirection:"column", gap:6}}>
+                    {m.email && (
+                      <a href={`mailto:${m.email}`} style={{color:"#c9a84c", fontSize:12, textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center", gap:6}}>
+                        ✉️ {m.email}
+                      </a>
+                    )}
+                    {m.phone && (
+                      <a href={`tel:${m.phone}`} style={{color:"#8faa9a", fontSize:12, textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center", gap:6}}>
+                        📞 {m.phone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12, marginBottom:8}}>
         <div>
           <div style={S.secHead}>🏛️ Board Portal</div>
