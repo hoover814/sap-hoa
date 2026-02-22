@@ -41,7 +41,7 @@ const BOARD_CONTENT_CONFIG = {
   announcementsRange: "Announcements!A2:D",
   eventsRange:        "Events!A2:F",
   todoRange:          "TodoList!A2:F",
-  boardInfoRange:     "BoardInfo!A3:G10",
+  boardInfoRange:     "BoardInfo!A3:F10",
 };
 // Paste your Board Content Apps Script URL here after deploying
 const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBN_4H7Yt567wApGQAFXyxozFwysG2PpaKDiNOOLeo4lxCI4_qQeXzGwaDD0LH3kKP/exec";
@@ -1156,7 +1156,7 @@ function BoardTab() {
     fetchBoardContent(BOARD_CONTENT_CONFIG.boardInfoRange)
       .then(rows => setBoardMembers(rows
         .filter(r => r[6] === "Active")
-        .map(r => ({ role: r[0]||"", name: r[1]||"", email: r[2]||"", phone: r[3]||"", bio: r[4]||"", photo: r[5]||"" }))
+        .map(r => ({ role: r[0]||"", name: r[1]||"", email: r[2]||"", phone: r[3]||"", photo: r[4]||"" }))
       ))
       .catch(() => {});
   }, []);
@@ -1398,11 +1398,7 @@ function BoardTab() {
                     fontSize:16, marginBottom:6, lineHeight:1.3}}>
                     {m.name || "Board Member"}
                   </div>
-                  {m.bio && (
-                    <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.7, marginBottom:12, textAlign:"left"}}>
-                      {m.bio}
-                    </div>
-                  )}
+
                   <div style={{display:"flex", flexDirection:"column", gap:6}}>
                     {m.email && (
                       <a href={`mailto:${m.email}`} style={{color:"#c9a84c", fontSize:12, textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center", gap:6}}>
@@ -1472,11 +1468,7 @@ function BoardTab() {
                     fontSize:16, marginBottom:6, lineHeight:1.3}}>
                     {m.name || "Board Member"}
                   </div>
-                  {m.bio && (
-                    <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.7, marginBottom:12, textAlign:"left"}}>
-                      {m.bio}
-                    </div>
-                  )}
+
                   <div style={{display:"flex", flexDirection:"column", gap:6}}>
                     {m.email && (
                       <a href={`mailto:${m.email}`} style={{color:"#c9a84c", fontSize:12, textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center", gap:6}}>
