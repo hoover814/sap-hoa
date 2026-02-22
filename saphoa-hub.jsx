@@ -30,28 +30,7 @@ const DIRECTORY_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybEBISWuZ
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
 const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
-const NEIGHBORHOOD_ZOOM   = 17;
 
-// Street name → approximate lat/lng lookup for Saints Drive/Court addresses
-const STREET_COORDS = {
-  "saints drive": { lat: 33.96928, lngBase: -84.39520, lngStep: 0.00015 },
-  "saints court": { lat: 33.96980, lngBase: -84.39430, lngStep: 0.00015 },
-};
-
-function getApproxCoords(address) {
-  if (!address) return null;
-  const lower = address.toLowerCase();
-  const numMatch = address.match(/\d+/);
-  const num = numMatch ? parseInt(numMatch[0]) : 900;
-  for (const [street, data] of Object.entries(STREET_COORDS)) {
-    if (lower.includes(street)) {
-      const offset = ((num - 840) / 10) * data.lngStep;
-      return [data.lat + (Math.random() * 0.0003 - 0.00015), data.lngBase - offset];
-    }
-  }
-  return [NEIGHBORHOOD_CENTER[0] + (Math.random()*0.002-0.001),
-          NEIGHBORHOOD_CENTER[1] + (Math.random()*0.002-0.001)];
-}
 
 // ── TABS ───────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -169,20 +148,6 @@ async function fetchBoardContent(range) {
   return data.values || [];
 }
 
-// ── LEAFLET LOADER ────────────────────────────────────────────────────────────
-function useLeaflet(onReady) {
-  useEffect(() => {
-    if (window.L) { onReady(window.L); return; }
-    const css = document.createElement("link");
-    css.rel = "stylesheet";
-    css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    document.head.appendChild(css);
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.onload = () => onReady(window.L);
-    document.head.appendChild(script);
-  }, []);
-}
 
 const sheetsConfigured = () =>
   GOOGLE_SHEETS_CONFIG.apiKey !== "YOUR_API_KEY_HERE" &&
@@ -203,124 +168,8 @@ async function fetchFromSheets() {
   const data = await res.json();
   if (!data.values || data.values.length === 0) return [];
   return data.values.map((row, i) => ({
-    id: i + 1, name: row[0]||"", address: row[1]||"", lat: parseFloat(row[2])||null, lng: parseFloat(row[3])||null, phone: row[4]||"", email: row[5]||"",
+    id: i + 1, name: row[0]||"", address: row[1]||"", phone: row[4]||"", email: row[5]||"",
   }));
-}
-
-// ── NEIGHBORHOOD MAP ──────────────────────────────────────────────────────────
-function NeighborhoodMap({ neighbors, selectedId, onSelectPin }) {
-  const mapRef    = useRef(null);
-  const leafletMap = useRef(null);
-  const markersRef = useRef({});
-
-  useLeaflet(L => {
-    if (leafletMap.current) return;
-    const map = L.map(mapRef.current, {
-      center: NEIGHBORHOOD_CENTER,
-      zoom: NEIGHBORHOOD_ZOOM,
-      zoomControl: true,
-    });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(map);
-
-    // Custom gold pin icon
-    const pinIcon = L.divIcon({
-      className: "",
-      html: `<div style="
-        width:28px;height:28px;border-radius:50% 50% 50% 0;
-        background:linear-gradient(135deg,#c9a84c,#e8cc80);
-        border:2px solid #fff;
-        transform:rotate(-45deg);
-        box-shadow:0 2px 6px rgba(0,0,0,.4);
-        cursor:pointer;
-      "></div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 28],
-      popupAnchor: [0, -30],
-    });
-
-    const selectedIcon = L.divIcon({
-      className: "",
-      html: `<div style="
-        width:34px;height:34px;border-radius:50% 50% 50% 0;
-        background:linear-gradient(135deg,#4caf87,#2d9e6f);
-        border:2px solid #fff;
-        transform:rotate(-45deg);
-        box-shadow:0 3px 10px rgba(76,175,135,.6);
-        cursor:pointer;
-      "></div>`,
-      iconSize: [34, 34],
-      iconAnchor: [17, 34],
-      popupAnchor: [0, -36],
-    });
-
-    neighbors.forEach(n => {
-      const coords = (n.lat && n.lng) ? [n.lat, n.lng] : getApproxCoords(n.address);
-      if (!coords) return;
-      const marker = L.marker(coords, { icon: pinIcon })
-        .addTo(map)
-        .bindPopup(`
-          <div style="font-family:Georgia,serif;min-width:160px;">
-            <div style="font-weight:bold;font-size:14px;color:#1a2332;margin-bottom:4px;">${n.name}</div>
-            <div style="font-size:12px;color:#555;">📍 ${n.address}</div>
-          </div>
-        `, { maxWidth: 220 });
-      marker.on("click", () => onSelectPin(n.id));
-      markersRef.current[n.id] = { marker, coords, pinIcon, selectedIcon };
-    });
-
-    leafletMap.current = map;
-  });
-
-  // Highlight selected pin
-  useEffect(() => {
-    if (!leafletMap.current) return;
-    Object.entries(markersRef.current).forEach(([id, {marker, pinIcon, selectedIcon}]) => {
-      marker.setIcon(parseInt(id) === selectedId ? selectedIcon : pinIcon);
-    });
-    if (selectedId && markersRef.current[selectedId]) {
-      const { coords, marker } = markersRef.current[selectedId];
-      leafletMap.current.setView(coords, 18, { animate: true });
-      marker.openPopup();
-    }
-  }, [selectedId]);
-
-  return (
-    <div style={{ marginTop: 32 }}>
-      <div style={S.cardTitle}>🗺️ Neighborhood Map</div>
-      <div style={{ color:"#8faa9a", fontSize:13, marginBottom:12 }}>
-        Click a neighbor card above to highlight their location on the map. Click a pin to see their name and address.
-      </div>
-      <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
-        <div ref={mapRef} style={{
-          flex:1, minWidth:300, height:420, borderRadius:12,
-          border:"1px solid rgba(201,168,76,.3)",
-          overflow:"hidden", zIndex:0,
-        }} />
-        <div style={{ width:200, display:"flex", flexDirection:"column", gap:10 }}>
-          <div style={{...S.card, marginBottom:0, padding:16}}>
-            <div style={{color:"#c9a84c",fontWeight:"bold",fontSize:13,marginBottom:10}}>📍 Map Legend</div>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              <div style={{width:14,height:14,borderRadius:"50%",background:"linear-gradient(135deg,#c9a84c,#e8cc80)",border:"1px solid #fff",flexShrink:0}}/>
-              <span style={{color:"#8faa9a",fontSize:12}}>Neighbor</span>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{width:14,height:14,borderRadius:"50%",background:"linear-gradient(135deg,#4caf87,#2d9e6f)",border:"1px solid #fff",flexShrink:0}}/>
-              <span style={{color:"#8faa9a",fontSize:12}}>Selected</span>
-            </div>
-          </div>
-          <div style={{...S.card, marginBottom:0, padding:16}}>
-            <div style={{color:"#c9a84c",fontWeight:"bold",fontSize:13,marginBottom:6}}>ℹ️ Note</div>
-            <div style={{color:"#8faa9a",fontSize:11,lineHeight:1.6}}>
-              Pin locations are approximate based on street addresses. Exact positions may vary slightly.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ── EXPANDABLE CONTACT FORM ────────────────────────────────────────────────────
@@ -561,7 +410,6 @@ function NeighborhoodDirectory() {
   const [newN, setNewN]           = useState({ name:"", address:"", phone:"", email:"" });
 
   const [search, setSearch] = useState("");
-  const [selectedPin, setSelectedPin] = useState(null);
 
   const loadFromSheets = () => {
     setLoading(true); setSheetError(null); setUsingSheets(true);
@@ -604,15 +452,6 @@ function NeighborhoodDirectory() {
     <div>
       <div style={S.secHead}>👥 Neighborhood Directory</div>
       <div style={S.secSub}>Find and connect with your Saint Andrews Park neighbors.</div>
-
-      {/* Neighborhood Map — top */}
-      {!loading && neighbors.length > 0 && (
-        <NeighborhoodMap
-          neighbors={neighbors}
-          selectedId={selectedPin}
-          onSelectPin={id => setSelectedPin(id === selectedPin ? null : id)}
-        />
-      )}
 
       {/* ── Expandable Add / Edit Contact Section ── */}
       {neighbors.length > 0 && (
@@ -711,11 +550,10 @@ const GOOGLE_SHEETS_CONFIG = {
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:16, marginTop:8 }}>
           {filtered.map((n,idx) => (
             <div key={n.id}
-              onClick={()=>{ if(editingId!==n.id) setSelectedPin(n.id===selectedPin?null:n.id); }}
               style={{
-                background: selectedPin===n.id ? "rgba(76,175,135,.1)" : editingId===n.id ? "rgba(201,168,76,.09)" : "rgba(255,255,255,.05)",
-                border: selectedPin===n.id ? "1px solid rgba(76,175,135,.5)" : editingId===n.id ? "1px solid rgba(201,168,76,.5)" : "1px solid rgba(201,168,76,.15)",
-                borderRadius:12, padding:20, transition:"all .2s", cursor: editingId===n.id ? "default" : "pointer",
+                background: editingId===n.id ? "rgba(201,168,76,.09)" : "rgba(255,255,255,.05)",
+                border: editingId===n.id ? "1px solid rgba(201,168,76,.5)" : "1px solid rgba(201,168,76,.15)",
+                borderRadius:12, padding:20, transition:"all .2s", cursor:"default",
               }}>
               {editingId===n.id ? (
                 <div>
