@@ -2546,8 +2546,9 @@ export default function App() {
 
         {/* Expandable help panel */}
         {helpOpen && (
-          <div style={{ ...S.card, position:"absolute", right:0, top:44, width:280, zIndex:20,
-            border:"1px solid rgba(201,168,76,.4)", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>
+          <div style={{ position:"absolute", right:0, top:44, width:280, zIndex:20,
+            background:"#1a2332", border:"1px solid rgba(201,168,76,.4)",
+            borderRadius:12, padding:20, boxShadow:"0 8px 32px rgba(0,0,0,.8)" }}>
             <div style={{ color:"#c9a84c", fontWeight:"bold", fontSize:14, marginBottom:10, fontFamily:"Georgia,serif" }}>
               🔑 How to Get Access
             </div>
@@ -2574,7 +2575,7 @@ export default function App() {
               style={{ display:"block", textAlign:"center", background:"linear-gradient(135deg,#c9a84c,#e8cc80)",
                 color:"#1a2332", fontWeight:"bold", fontSize:13, padding:"10px 16px", borderRadius:8,
                 textDecoration:"none", fontFamily:"Georgia,serif" }}>
-              ✉️ Email Jacob Harmon
+              Email Jacob Harmon
             </a>
             <div style={{ color:"#8faa9a", fontSize:10, textAlign:"center", marginTop:8, fontStyle:"italic" }}>
               jacobharmon18@gmail.com
