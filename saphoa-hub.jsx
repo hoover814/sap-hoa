@@ -2046,7 +2046,7 @@ function Bylaws() {
           <button onClick={() => setPdfOpen(!pdfOpen)} style={{ ...S.btn, whiteSpace:"nowrap" }}>
             {pdfOpen ? "⬆ Hide PDF" : "📄 View Full PDF"}
           </button>
-          <a href={PDF_URL} download="SAP_Covenants.pdf"
+          <a href={PDF_URL} download="Saint_Andrews_Park_Neighborhood_Covenants.pdf"
             style={{ ...S.btnOut, textDecoration:"none", whiteSpace:"nowrap", display:"inline-block" }}>
             ⬇ Download PDF
           </a>
