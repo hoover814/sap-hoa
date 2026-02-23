@@ -2529,8 +2529,60 @@ export default function App() {
   }};
 
   // ── PORTAL LOGIN SCREEN ──
+  const [helpOpen, setHelpOpen] = useState(false);
+
   if (!portalUnlocked) return (
-    <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh" }}>
+    <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", position:"relative" }}>
+
+      {/* Help button — top right */}
+      <div style={{ position:"absolute", top:16, right:16, zIndex:10 }}>
+        <button
+          onClick={() => setHelpOpen(!helpOpen)}
+          style={{ background:"rgba(201,168,76,.12)", border:"1px solid rgba(201,168,76,.3)", color:"#c9a84c",
+            borderRadius:8, padding:"8px 14px", fontSize:13, cursor:"pointer", fontFamily:"Georgia,serif",
+            fontWeight:"bold", display:"flex", alignItems:"center", gap:6 }}>
+          {helpOpen ? "✕ Close" : "❓ Need Help?"}
+        </button>
+
+        {/* Expandable help panel */}
+        {helpOpen && (
+          <div style={{ ...S.card, position:"absolute", right:0, top:44, width:280, zIndex:20,
+            border:"1px solid rgba(201,168,76,.4)", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>
+            <div style={{ color:"#c9a84c", fontWeight:"bold", fontSize:14, marginBottom:10, fontFamily:"Georgia,serif" }}>
+              🔑 How to Get Access
+            </div>
+            <div style={{ color:"#8faa9a", fontSize:12, lineHeight:1.8, marginBottom:14 }}>
+              The SAP Community Portal is for Saint Andrews Park residents only. To receive the community password:
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+              {[
+                { step:"1", text:"Confirm you are a Saint Andrews Park homeowner or resident" },
+                { step:"2", text:"Contact Jacob Harmon to request the password" },
+                { step:"3", text:"You will receive the password by return email" },
+              ].map(s => (
+                <div key={s.step} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+                  <div style={{ width:22, height:22, borderRadius:"50%", background:"linear-gradient(135deg,#c9a84c,#e8cc80)",
+                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:11,
+                    fontWeight:"bold", color:"#1a2332", flexShrink:0, marginTop:1 }}>
+                    {s.step}
+                  </div>
+                  <div style={{ color:"#b8c8b8", fontSize:12, lineHeight:1.6 }}>{s.text}</div>
+                </div>
+              ))}
+            </div>
+            <a href="mailto:jacobharmon18@gmail.com?subject=SAP Community Portal Access Request"
+              style={{ display:"block", textAlign:"center", background:"linear-gradient(135deg,#c9a84c,#e8cc80)",
+                color:"#1a2332", fontWeight:"bold", fontSize:13, padding:"10px 16px", borderRadius:8,
+                textDecoration:"none", fontFamily:"Georgia,serif" }}>
+              ✉️ Email Jacob Harmon
+            </a>
+            <div style={{ color:"#8faa9a", fontSize:10, textAlign:"center", marginTop:8, fontStyle:"italic" }}>
+              jacobharmon18@gmail.com
+            </div>
+          </div>
+        )}
+      </div>
+
       <div style={{ width:"100%", maxWidth:420, padding:"0 20px" }}>
         {/* Header */}
         <div style={{ textAlign:"center", marginBottom:32 }}>
@@ -2565,7 +2617,7 @@ export default function App() {
             Enter Portal
           </button>
           <div style={{ color:"#8faa9a", fontSize:11, marginTop:16, fontStyle:"italic" }}>
-            Don't have the password? Contact your HOA board.
+            Don't have the password? Click <strong style={{color:"#c9a84c"}}>Need Help?</strong> in the top right.
           </div>
         </div>
       </div>
