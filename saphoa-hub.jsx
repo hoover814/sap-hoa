@@ -34,6 +34,7 @@ const CONTRACTORS_SHEET_CONFIG = {
 // Paste your Apps Script Web App URL here after deploying the script
 const CONTRACTORS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1yzQZkdC_KplEPzHEMvRL9GesSTOdqC9Nv_TqNA3n98M1O5G2E02col6KKTj-fju50g/exec";
 const BOARD_PASSWORD = "SAP2026"; // change before deploying!
+const PORTAL_PASSWORD = "Saints26!";
 
 const BOARD_CONTENT_CONFIG = {
   apiKey:        "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
@@ -2500,10 +2501,23 @@ function ARCRequest() {
 
 // ── ROOT ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab,setTab]=useState("dashboard");
-  const isMobile = useIsMobile();
+  const [tab, setTab]             = useState("dashboard");
+  const [portalUnlocked, setPortalUnlocked] = useState(false);
+  const [pwInput, setPwInput]     = useState("");
+  const [pwError, setPwError]     = useState(false);
+  const isMobile                  = useIsMobile();
 
-  const render=()=>{switch(tab){
+  const unlock = () => {
+    if (pwInput === PORTAL_PASSWORD) {
+      setPortalUnlocked(true);
+      setPwError(false);
+      setPwInput("");
+    } else {
+      setPwError(true);
+    }
+  };
+
+  const render = () => { switch(tab) {
     case"dashboard":   return <Dashboard onNavigate={setTab}/>;
     case"directory":   return <NeighborhoodDirectory/>;
     case"contractors": return <Contractors/>;
@@ -2513,6 +2527,52 @@ export default function App() {
     case"board":       return <BoardTab/>;
     default:           return null;
   }};
+
+  // ── PORTAL LOGIN SCREEN ──
+  if (!portalUnlocked) return (
+    <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh" }}>
+      <div style={{ width:"100%", maxWidth:420, padding:"0 20px" }}>
+        {/* Header */}
+        <div style={{ textAlign:"center", marginBottom:32 }}>
+          <div style={{ fontSize:64, marginBottom:16 }}>⛳</div>
+          <div style={{ ...S.logoTitle, fontSize:28, textAlign:"center", marginBottom:6 }}>Saint Andrews Park</div>
+          <div style={{ color:"#8faa9a", fontSize:15 }}>Homeowners Association</div>
+        </div>
+        {/* Login card */}
+        <div style={{ ...S.card, textAlign:"center" }}>
+          <div style={{ color:"#c9a84c", fontWeight:"bold", fontSize:18, marginBottom:8, fontFamily:"Georgia,serif" }}>
+            🔐 Community Portal
+          </div>
+          <div style={{ color:"#8faa9a", fontSize:13, marginBottom:24, lineHeight:1.7 }}>
+            This portal is for Saint Andrews Park residents only.<br/>
+            Please enter the community password to continue.
+          </div>
+          <input
+            style={{ ...S.input, textAlign:"center", letterSpacing:4, fontSize:18, marginBottom:12 }}
+            type="password"
+            placeholder="••••••••"
+            value={pwInput}
+            onChange={e => { setPwInput(e.target.value); setPwError(false); }}
+            onKeyDown={e => e.key === "Enter" && unlock()}
+            autoFocus
+          />
+          {pwError && (
+            <div style={{ color:"#e05c5c", fontSize:13, marginBottom:12 }}>
+              Incorrect password — please try again.
+            </div>
+          )}
+          <button style={{ ...S.btn, width:"100%", fontSize:15, padding:"13px 20px" }} onClick={unlock}>
+            Enter Portal
+          </button>
+          <div style={{ color:"#8faa9a", fontSize:11, marginTop:16, fontStyle:"italic" }}>
+            Don't have the password? Contact your HOA board.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── MAIN PORTAL ──
   return (
     <div style={S.app}>
       <div style={{...S.header, padding: isMobile ? "12px 16px" : "20px 32px"}}>
