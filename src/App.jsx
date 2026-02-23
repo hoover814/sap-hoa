@@ -2003,7 +2003,7 @@ function Bylaws() {
   const [query, setQuery]      = useState("");
   const [openArticle, setOpen] = useState(null);
   const [pdfOpen, setPdfOpen]  = useState(false);
-  const PDF_URL = "/Saint_Andrews_Park_Neighborhood_Covenants.pdf";
+  const PDF_URL = "/sap-hoa/Saint_Andrews_Park_Neighborhood_Covenants.pdf";
 
   const q = query.toLowerCase().trim();
 
