@@ -89,15 +89,15 @@ const avatarGradients = [
 
 // ── STYLES ─────────────────────────────────────────────────────────────────────
 const S = {
-  app:       { fontFamily:"Georgia,'Times New Roman',serif", background:"linear-gradient(135deg,#1a2332 0%,#243447 50%,#1e3a2f 100%)", minHeight:"100vh", color:"#e8e0d0" },
-  header:    { background:"linear-gradient(90deg,#0f1e2e,#1a3a28)", borderBottom:"2px solid #c9a84c", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 },
+  app:       { fontFamily:"Georgia,'Times New Roman',serif", background:"linear-gradient(135deg,#1a2332 0%,#243447 50%,#1e3a2f 100%)", minHeight:"100vh", color:"#e8e0d0", overflowX:"hidden", maxWidth:"100vw" },
+  header:    { background:"linear-gradient(90deg,#0f1e2e,#1a3a28)", borderBottom:"2px solid #c9a84c", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, width:"100%", boxSizing:"border-box" },
   logoIcon:  { width:40, height:40, background:"linear-gradient(135deg,#c9a84c,#e8cc80)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, boxShadow:"0 4px 12px rgba(201,168,76,.4)" },
   logoTitle: { fontSize:20, fontWeight:"bold", color:"#c9a84c", letterSpacing:.5 },
   logoSub:   { fontSize:12, color:"#8faa9a", letterSpacing:2, textTransform:"uppercase" },
   badge:     { background:"#c9a84c", color:"#1a2332", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:"bold", letterSpacing:1 },
   nav:       { display:"flex", gap:4, padding:"10px 12px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)", overflowX:"auto", WebkitOverflowScrolling:"touch" },
   navBtn: a=>({ padding:"7px 10px", borderRadius:8, border:a?"1px solid #c9a84c":"1px solid transparent", background:a?"rgba(201,168,76,.15)":"transparent", color:a?"#c9a84c":"#8faa9a", cursor:"pointer", fontSize:12, fontFamily:"Georgia,serif", whiteSpace:"nowrap", transition:"all .2s" }),
-  main:      { padding:"20px 16px", maxWidth:1100, margin:"0 auto" },
+  main:      { padding:"20px 16px", maxWidth:1100, margin:"0 auto", overflowX:"hidden", width:"100%" },
   card:      { background:"rgba(255,255,255,.05)", border:"1px solid rgba(201,168,76,.2)", borderRadius:12, padding:"clamp(12px,3vw,22px)", marginBottom:16, backdropFilter:"blur(4px)" },
   cardTitle: { color:"#c9a84c", fontSize:18, marginBottom:16, fontWeight:"bold", borderBottom:"1px solid rgba(201,168,76,.2)", paddingBottom:10 },
   grid3:     { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:12, marginBottom:24 },
@@ -535,7 +535,7 @@ const GOOGLE_SHEETS_CONFIG = {
       {/* Controls row */}
       <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
         <input
-          style={{ ...S.input, flex:1, minWidth:200, marginBottom:0 }}
+          style={{ ...S.input, flex:1, minWidth:0, marginBottom:0 }}
           placeholder="🔍 Search by name, address, phone, or email..."
           value={search} onChange={e=>setSearch(e.target.value)}
         />
@@ -953,7 +953,7 @@ function Contractors() {
       {/* Search + Add button */}
       <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
         <input
-          style={{ ...S.input, flex:1, minWidth:200, marginBottom:0 }}
+          style={{ ...S.input, flex:1, minWidth:0, marginBottom:0 }}
           placeholder="🔍 Search contractors..."
           value={search} onChange={e => setSearch(e.target.value)}
         />
@@ -2065,7 +2065,7 @@ function Bylaws() {
         <div style={{ ...S.cardTitle, marginBottom:12 }}>🔍 Search the Covenants</div>
         <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
           <input
-            style={{ flex:1, padding:"11px 16px", borderRadius:8, background:"rgba(255,255,255,.07)", border:"1px solid rgba(201,168,76,.3)", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, outline:"none", minWidth:200 }}
+            style={{ flex:1, padding:"11px 16px", borderRadius:8, background:"rgba(255,255,255,.07)", border:"1px solid rgba(201,168,76,.3)", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, outline:"none", minWidth:0 }}
             placeholder="Search for fences, pets, trees, assessments, pools..."
             value={query}
             onChange={e => { setQuery(e.target.value); setOpen(null); }}
@@ -2482,7 +2482,7 @@ function ARCRequest() {
       {/* ── Submit ── */}
       <div style={{ marginTop: 20, display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
         <button
-          style={{ ...S.btn, opacity: submitting ? .6 : 1, minWidth: 180 }}
+          style={{ ...S.btn, opacity: submitting ? .6 : 1, width:"100%" }}
           onClick={handleSubmit}
           disabled={submitting}
         >
@@ -2546,7 +2546,7 @@ export default function App() {
 
         {/* Expandable help panel */}
         {helpOpen && (
-          <div style={{ position:"absolute", right:0, top:44, width:280, zIndex:20,
+          <div style={{ position:"absolute", right:0, top:44, width:"min(280px,85vw)", zIndex:20,
             background:"#1a2332", border:"1px solid rgba(201,168,76,.4)",
             borderRadius:12, padding:20, boxShadow:"0 8px 32px rgba(0,0,0,.8)" }}>
             <div style={{ color:"#c9a84c", fontWeight:"bold", fontSize:14, marginBottom:10, fontFamily:"Georgia,serif" }}>
