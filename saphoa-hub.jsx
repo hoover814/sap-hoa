@@ -96,11 +96,11 @@ const S = {
   logoSub:   { fontSize:12, color:"#8faa9a", letterSpacing:2, textTransform:"uppercase" },
   badge:     { background:"#c9a84c", color:"#1a2332", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:"bold", letterSpacing:1 },
   nav:       { display:"flex", gap:4, padding:"10px 12px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)", overflowX:"auto", WebkitOverflowScrolling:"touch" },
-  navBtn: a=>({ padding:"8px 14px", borderRadius:8, border:a?"1px solid #c9a84c":"1px solid transparent", background:a?"rgba(201,168,76,.15)":"transparent", color:a?"#c9a84c":"#8faa9a", cursor:"pointer", fontSize:13, fontFamily:"Georgia,serif", whiteSpace:"nowrap", transition:"all .2s" }),
+  navBtn: a=>({ padding:"7px 10px", borderRadius:8, border:a?"1px solid #c9a84c":"1px solid transparent", background:a?"rgba(201,168,76,.15)":"transparent", color:a?"#c9a84c":"#8faa9a", cursor:"pointer", fontSize:12, fontFamily:"Georgia,serif", whiteSpace:"nowrap", transition:"all .2s" }),
   main:      { padding:"20px 16px", maxWidth:1100, margin:"0 auto" },
-  card:      { background:"rgba(255,255,255,.05)", border:"1px solid rgba(201,168,76,.2)", borderRadius:12, padding:"clamp(14px,3vw,24px)", marginBottom:20, backdropFilter:"blur(4px)" },
+  card:      { background:"rgba(255,255,255,.05)", border:"1px solid rgba(201,168,76,.2)", borderRadius:12, padding:"clamp(12px,3vw,22px)", marginBottom:16, backdropFilter:"blur(4px)" },
   cardTitle: { color:"#c9a84c", fontSize:18, marginBottom:16, fontWeight:"bold", borderBottom:"1px solid rgba(201,168,76,.2)", paddingBottom:10 },
-  grid3:     { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:24 },
+  grid3:     { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:12, marginBottom:24 },
   statCard: a=>({ background:`linear-gradient(135deg,rgba(${a},.15),rgba(${a},.05))`, border:`1px solid rgba(${a},.3)`, borderRadius:10, padding:20, textAlign:"center" }),
   statNum:   { fontSize:36, fontWeight:"bold", color:"#e8e0d0", lineHeight:1 },
   statLabel: { fontSize:12, color:"#8faa9a", textTransform:"uppercase", letterSpacing:1, marginTop:6 },
@@ -349,7 +349,7 @@ function ExpandableContactForm({ neighbors, onSubmit }) {
           {/* Form fields — show for add always, or edit once neighbor selected */}
           {(mode === "add" || selected) && (
             <div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12, marginBottom:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:10, marginBottom:16 }}>
                 {[
                   { label:"Full Name / Family Name", field:"name",    ph:"e.g. The Smith Family",       required:true },
                   { label:"Street Address",           field:"address", ph:"e.g. 851 Saints Drive",       required:false },
@@ -545,7 +545,7 @@ const GOOGLE_SHEETS_CONFIG = {
       {boardUnlocked && showAdd && (
         <div style={S.card}>
           <div style={S.cardTitle}>➕ Add New Neighbor</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10 }}>
             {[
               {label:"Full Name / Family Name", field:"name",    ph:"e.g. The Smith Family"},
               {label:"Street Address",           field:"address", ph:"e.g. 113 Saint Andrews Dr"},
@@ -966,7 +966,7 @@ function Contractors() {
       {showAdd && (
         <div style={{ ...S.card, border:"1px solid rgba(201,168,76,.4)" }}>
           <div style={S.cardTitle}>➕ Add a Contractor</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10 }}>
             <div style={{ gridColumn:"1/-1" }}>
               <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Category</div>
               <select
@@ -1082,7 +1082,7 @@ function Contractors() {
 
 function ContractorGrid({ items, catColor, onDelete }) {
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12 }}>
       {items.map(c => (
         <div key={c.id} style={{
           background:"rgba(255,255,255,.05)",
@@ -1379,7 +1379,7 @@ function BoardTab() {
             Board member info coming soon! 🏡
           </div>
         ) : (
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12}}>
             {boardMembers.map((m, i) => {
               const icons = {"President":"👑","Vice President":"🏛️","Treasurer":"💰","Secretary":"📋"};
               const icon = icons[m.role] || "🏡";
@@ -1449,7 +1449,7 @@ function BoardTab() {
             Board member info coming soon! 🏡
           </div>
         ) : (
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12}}>
             {boardMembers.map((m, i) => {
               const icons = {"President":"👑","Vice President":"🏛️","Treasurer":"💰","Secretary":"📋"};
               const icon = icons[m.role] || "🏡";
@@ -2300,7 +2300,7 @@ function ARCRequest() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 14 }}>
 
         {/* ── Left column: Homeowner Info ── */}
         <div style={S.card}>
