@@ -473,7 +473,7 @@ function NeighborhoodDirectory() {
 
   return (
     <div>
-      <div style={S.secHead}>👥 Neighborhood Directory</div>
+      <div style={S.secHead}>Neighborhood Directory</div>
       <div style={S.secSub}>Find and connect with your Saint Andrews Park neighbors.</div>
 
       {/* ── Expandable Add / Edit Contact Section ── */}
@@ -679,7 +679,7 @@ function Dashboard({ onNavigate }) {
 
       {/* Announcements — TOP */}
       <div style={S.card}>
-        <div style={S.cardTitle}>📣 Community Announcements</div>
+        <div style={S.cardTitle}>Community Announcements</div>
         {announcements.length === 0 ? (
           <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
             No announcements at this time. Check back soon! 😊
@@ -697,7 +697,7 @@ function Dashboard({ onNavigate }) {
 
       {/* Events — SECOND */}
       <div style={S.card}>
-        <div style={S.cardTitle}>📅 Upcoming Events</div>
+        <div style={S.cardTitle}>Upcoming Events</div>
         {events.length === 0 ? (
           <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
             No upcoming events scheduled. Stay tuned! 🎉
@@ -710,7 +710,7 @@ function Dashboard({ onNavigate }) {
             <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8}}>
               <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:15}}>{e.title}</div>
               <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>📅 {e.date}</span>}
+                {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>{e.date}</span>}
                 {e.time && <span style={{...S.pill("#4caf87"), fontSize:11}}>🕐 {e.time}</span>}
               </div>
             </div>
@@ -729,7 +729,7 @@ function Dashboard({ onNavigate }) {
             onMouseEnter={e=>e.currentTarget.style.borderColor="#c9a84c"}
             onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(201,168,76,.3)"}
           >
-            <div style={{fontSize:22, marginBottom:6}}>{l.icon}</div>
+
             <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:14, marginBottom:4, lineHeight:1.3}}>{l.label}</div>
             <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.5}}>{l.desc}</div>
             <div style={{marginTop:8, color:"#c9a84c", fontSize:11, fontWeight:"bold"}}>View →</div>
@@ -744,7 +744,7 @@ function Dashboard({ onNavigate }) {
 function Newsletter() {
   return (
     <div>
-      <div style={S.secHead}>📰 Newsletter</div>
+      <div style={S.secHead}>Newsletter</div>
       <div style={S.secSub}>Stay tuned for updates from your Saint Andrews Park board!</div>
       <div style={{...S.card, textAlign:"center", padding:"60px 20px"}}>
         <div style={{fontSize:64, marginBottom:20}}>📰</div>
@@ -887,7 +887,7 @@ function Contractors() {
 
   return (
     <div>
-      <div style={S.secHead}>🔨 Contractor Directory</div>
+      <div style={S.secHead}>Contractor Directory</div>
       <div style={S.secSub}>Community-recommended contractors for home improvements. Add one you've used!</div>
       {sheetError && sheetError !== "NETWORK_BLOCKED" && (
         <div style={{ ...S.card, border:"1px solid rgba(224,92,92,.3)", background:"rgba(224,92,92,.07)", marginBottom:16 }}>
@@ -1607,7 +1607,7 @@ function BoardTab() {
                   <div style={{flex:1}}>
                     <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:15, marginBottom:6}}>{e.title}</div>
                     <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:6}}>
-                      {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>📅 {e.date}</span>}
+                      {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>{e.date}</span>}
                       {e.time && <span style={{...S.pill("#4caf87"), fontSize:11}}>🕐 {e.time}</span>}
                     </div>
                     {e.location && <div style={{color:"#8faa9a", fontSize:12, marginBottom:4}}>📍 {e.location}</div>}
@@ -2036,7 +2036,7 @@ function Bylaws() {
       {/* Header */}
       <div style={{ ...S.card, background:"linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border:"2px solid rgba(201,168,76,.4)", marginBottom:24 }}>
         <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
-          <div style={{ fontSize:40 }}>📜</div>
+          
           <div style={{ flex:1 }}>
             <div style={{ ...S.secHead, marginBottom:4 }}>Bylaws & Covenants</div>
             <div style={{ color:"#8faa9a", fontSize:13 }}>
@@ -2281,7 +2281,7 @@ function ARCRequest() {
       {/* Header */}
       <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border: "2px solid rgba(201,168,76,.4)", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 40 }}>🌳</div>
+          
           <div>
             <div style={{ ...S.secHead, marginBottom: 4 }}>Architectural Change Request</div>
 
@@ -2626,15 +2626,7 @@ export default function App() {
     </div>
   );
 
-  const TAB_ICONS = {
-    dashboard:   "🏡",
-    directory:   "👥",
-    contractors: "🔨",
-    newsletter:  "📰",
-    arc:         "🌳",
-    bylaws:      "📜",
-    board:       "🏛️",
-  };
+  const TAB_ICONS = {};
 
   // ── MAIN PORTAL ──
   return (
@@ -2673,26 +2665,14 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── DESKTOP TAB BAR — visible only on desktop ── */}
-      {!isMobile && (
-        <div style={{ ...S.nav, padding:"10px 16px" }}>
-          {TABS.map(t => (
-            <button key={t.id} style={S.navBtn(tab===t.id)} onClick={() => { setTab(t.id); setMenuOpen(false); }}>
-              {TAB_ICONS[t.id]} {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {/* ── MOBILE CURRENT TAB INDICATOR ── */}
-      {isMobile && (
-        <div style={{ padding:"10px 16px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)",
-          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <span style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontSize:14, fontWeight:"bold" }}>
-            {TAB_ICONS[tab]} {TABS.find(t=>t.id===tab)?.label}
-          </span>
-          <span style={{ color:"#8faa9a", fontSize:12 }}>Tap ☰ to navigate</span>
-        </div>
-      )}
+      {/* ── CURRENT TAB INDICATOR ── */}
+      <div style={{ padding:"10px 16px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)",
+        display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontSize:14, fontWeight:"bold" }}>
+          {TABS.find(t=>t.id===tab)?.label}
+        </span>
+        <span style={{ color:"#8faa9a", fontSize:12 }}>Tap ☰ to navigate</span>
+      </div>
 
       {/* ── SLIDE-IN MENU OVERLAY ── */}
       {menuOpen && (
@@ -2739,7 +2719,6 @@ export default function App() {
                   onMouseEnter={e => { if(tab!==t.id) e.currentTarget.style.background="rgba(255,255,255,.05)"; }}
                   onMouseLeave={e => { if(tab!==t.id) e.currentTarget.style.background="transparent"; }}
                 >
-                  <span style={{ fontSize:20 }}>{TAB_ICONS[t.id]}</span>
                   <span>{t.label}</span>
                   {tab===t.id && <span style={{ marginLeft:"auto", fontSize:12, color:"#c9a84c" }}>●</span>}
                 </button>
