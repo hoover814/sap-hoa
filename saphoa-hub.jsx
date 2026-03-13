@@ -2505,6 +2505,7 @@ export default function App() {
   const [portalUnlocked, setPortalUnlocked] = useState(false);
   const [pwInput, setPwInput]     = useState("");
   const [pwError, setPwError]     = useState(false);
+  const [menuOpen, setMenuOpen]   = useState(false);
   const isMobile                  = useIsMobile();
 
   const unlock = () => {
@@ -2625,23 +2626,135 @@ export default function App() {
     </div>
   );
 
+  const TAB_ICONS = {
+    dashboard:   "🏡",
+    directory:   "👥",
+    contractors: "🔨",
+    newsletter:  "📰",
+    arc:         "🌳",
+    bylaws:      "📜",
+    board:       "🏛️",
+  };
+
   // ── MAIN PORTAL ──
   return (
     <div style={S.app}>
-      <div style={{...S.header, padding: isMobile ? "12px 16px" : "20px 32px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:14}}>
+
+      {/* ── HEADER ── */}
+      <div style={{ ...S.header, padding:"12px 16px" }}>
+        {/* Logo */}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={S.logoIcon}>⛳</div>
           <div>
-            <div style={{...S.logoTitle, fontSize: isMobile ? 18 : 26}}>Saint Andrews Park</div>
-            {!isMobile && <div style={S.logoSub}>Homeowners Association</div>}
+            <div style={{ ...S.logoTitle, fontSize: isMobile ? 17 : 22 }}>Saint Andrews Park</div>
+            <div style={{ ...S.logoSub, fontSize:11 }}>Homeowners Association</div>
           </div>
         </div>
-        {!isMobile && <div style={S.badge}>COMMUNITY PORTAL</div>}
+        {/* Right side — hamburger on mobile, badge + tabs on desktop */}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {!isMobile && <div style={S.badge}>COMMUNITY PORTAL</div>}
+          {/* Hamburger button — always visible */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{ background:"none", border:"none", cursor:"pointer", padding:"6px 8px",
+              display:"flex", flexDirection:"column", gap:5, alignItems:"center", justifyContent:"center" }}
+            aria-label="Menu"
+          >
+            {menuOpen ? (
+              <span style={{ color:"#c9a84c", fontSize:22, lineHeight:1 }}>✕</span>
+            ) : (
+              <>
+                <span style={{ display:"block", width:22, height:2, background:"#c9a84c", borderRadius:2 }} />
+                <span style={{ display:"block", width:22, height:2, background:"#c9a84c", borderRadius:2 }} />
+                <span style={{ display:"block", width:22, height:2, background:"#c9a84c", borderRadius:2 }} />
+              </>
+            )}
+          </button>
+        </div>
       </div>
-      <div style={{...S.nav, padding: isMobile ? "8px 12px" : "10px 16px"}}>
-        {TABS.map(t=><button key={t.id} style={S.navBtn(tab===t.id)} onClick={()=>setTab(t.id)}>{t.label}</button>)}
-      </div>
-      <div style={{...S.main, padding: isMobile ? "16px 12px" : "32px"}}>{render()}</div>
+
+      {/* ── DESKTOP TAB BAR — hidden on mobile ── */}
+      {!isMobile && (
+        <div style={{ ...S.nav, padding:"10px 16px" }}>
+          {TABS.map(t => (
+            <button key={t.id} style={S.navBtn(tab===t.id)} onClick={() => { setTab(t.id); setMenuOpen(false); }}>
+              {TAB_ICONS[t.id]} {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── SLIDE-IN MENU OVERLAY ── */}
+      {menuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setMenuOpen(false)}
+            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", zIndex:40 }}
+          />
+          {/* Drawer */}
+          <div style={{
+            position:"fixed", top:0, right:0, bottom:0, width: isMobile ? "75vw" : 300,
+            background:"linear-gradient(180deg,#0f1e2e 0%,#1a3a28 100%)",
+            borderLeft:"2px solid rgba(201,168,76,.4)",
+            zIndex:50, display:"flex", flexDirection:"column",
+            boxShadow:"-8px 0 32px rgba(0,0,0,.5)",
+            animation:"slideIn .25s ease-out",
+          }}>
+            {/* Drawer header */}
+            <div style={{ padding:"20px 20px 16px", borderBottom:"1px solid rgba(201,168,76,.2)",
+              display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontWeight:"bold", fontSize:15 }}>
+                Navigation
+              </div>
+              <button onClick={() => setMenuOpen(false)}
+                style={{ background:"none", border:"none", color:"#8faa9a", fontSize:20, cursor:"pointer", padding:"2px 6px" }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Nav items */}
+            <div style={{ flex:1, overflowY:"auto", padding:"8px 0" }}>
+              {TABS.map(t => (
+                <button key={t.id}
+                  onClick={() => { setTab(t.id); setMenuOpen(false); }}
+                  style={{
+                    display:"flex", alignItems:"center", gap:14, width:"100%",
+                    padding:"14px 20px", background: tab===t.id ? "rgba(201,168,76,.12)" : "transparent",
+                    border:"none", borderLeft: tab===t.id ? "3px solid #c9a84c" : "3px solid transparent",
+                    color: tab===t.id ? "#c9a84c" : "#b8c8b8",
+                    fontFamily:"Georgia,serif", fontSize:15, cursor:"pointer", textAlign:"left",
+                    transition:"all .15s",
+                  }}
+                  onMouseEnter={e => { if(tab!==t.id) e.currentTarget.style.background="rgba(255,255,255,.05)"; }}
+                  onMouseLeave={e => { if(tab!==t.id) e.currentTarget.style.background="transparent"; }}
+                >
+                  <span style={{ fontSize:20 }}>{TAB_ICONS[t.id]}</span>
+                  <span>{t.label}</span>
+                  {tab===t.id && <span style={{ marginLeft:"auto", fontSize:12, color:"#c9a84c" }}>●</span>}
+                </button>
+              ))}
+            </div>
+
+            {/* Drawer footer */}
+            <div style={{ padding:"16px 20px", borderTop:"1px solid rgba(201,168,76,.15)" }}>
+              <div style={{ color:"#8faa9a", fontSize:11, textAlign:"center" }}>
+                Saint Andrews Park HOA · Marietta, GA
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ ...S.main, padding: isMobile ? "16px 12px" : "32px" }}>{render()}</div>
+
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); }
+          to   { transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 }
