@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 // ── RESPONSIVE HOOK ───────────────────────────────────────────────────────────
 function useIsMobile() {
-  const [mobile, setMobile] = useState(window.innerWidth < 640);
+  const [mobile, setMobile] = useState(window.innerWidth < 900);
   useEffect(() => {
     // Ensure proper viewport meta on mobile
     let meta = document.querySelector("meta[name=viewport]");
@@ -12,7 +12,7 @@ function useIsMobile() {
       document.head.appendChild(meta);
     }
     meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
-    const fn = () => setMobile(window.innerWidth < 640);
+    const fn = () => setMobile(window.innerWidth < 900);
     window.addEventListener("resize", fn);
     return () => window.removeEventListener("resize", fn);
   }, []);
@@ -2673,7 +2673,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── DESKTOP TAB BAR — hidden on mobile ── */}
+      {/* ── DESKTOP TAB BAR — visible only on desktop ── */}
       {!isMobile && (
         <div style={{ ...S.nav, padding:"10px 16px" }}>
           {TABS.map(t => (
@@ -2681,6 +2681,16 @@ export default function App() {
               {TAB_ICONS[t.id]} {t.label}
             </button>
           ))}
+        </div>
+      )}
+      {/* ── MOBILE CURRENT TAB INDICATOR ── */}
+      {isMobile && (
+        <div style={{ padding:"10px 16px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)",
+          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <span style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontSize:14, fontWeight:"bold" }}>
+            {TAB_ICONS[tab]} {TABS.find(t=>t.id===tab)?.label}
+          </span>
+          <span style={{ color:"#8faa9a", fontSize:12 }}>Tap ☰ to navigate</span>
         </div>
       )}
 
