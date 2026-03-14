@@ -570,7 +570,7 @@ const GOOGLE_SHEETS_CONFIG = {
 
       {/* Card grid */}
       {!loading && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, marginTop:8 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:10, marginTop:8 }}>
           {filtered.map((n,idx) => (
             <div key={n.id}
               style={{
