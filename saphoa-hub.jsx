@@ -2743,6 +2743,18 @@ export default function App() {
           from { transform: translateX(100%); }
           to   { transform: translateX(0); }
         }
+        *, *::before, *::after {
+          box-sizing: border-box;
+          max-width: 100%;
+        }
+        html, body {
+          overflow-x: hidden;
+          max-width: 100vw;
+        }
+        img {
+          max-width: 100%;
+          height: auto;
+        }
       `}</style>
     </div>
   );
