@@ -721,14 +721,146 @@ function Dashboard({ onNavigate }) {
             onMouseEnter={e=>e.currentTarget.style.borderColor="#c9a84c"}
             onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(201,168,76,.3)"}
           >
-
             <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:14, marginBottom:4, lineHeight:1.3}}>{l.label}</div>
             <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.5}}>{l.desc}</div>
             <div style={{marginTop:8, color:"#c9a84c", fontSize:11, fontWeight:"bold"}}>View →</div>
           </div>
         ))}
       </div>
+
+      {/* Feedback Card */}
+      <FeedbackCard />
     </div>
+  );
+}
+
+// ── FEEDBACK CARD ──────────────────────────────────────────────────────────────
+function FeedbackCard() {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const EMAIL = "jacobharmon18@gmail.com";
+  const SUBJECT = "SAP Community Portal Feedback";
+  const BODY = "Hi Jacob,%0A%0AType: Bug / Enhancement (delete as appropriate)%0A%0ADetails:%0A%0A";
+
+  const copyEmail = () => {
+    navigator.clipboard.writeText(EMAIL)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); })
+      .catch(() => {
+        // Fallback for older browsers
+        const el = document.createElement("textarea");
+        el.value = EMAIL;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      });
+  };
+
+  return (
+    <>
+      {/* Card */}
+      <div style={{ ...S.card, border:"1px solid rgba(91,141,238,.3)", background:"rgba(91,141,238,.05)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+          <div>
+            <div style={{ color:"#5b8dee", fontWeight:"bold", fontSize:15, marginBottom:4, fontFamily:"Georgia,serif" }}>
+              Portal Feedback
+            </div>
+            <div style={{ color:"#8faa9a", fontSize:13, lineHeight:1.6 }}>
+              Found a bug or have an idea to improve the portal? Let us know!
+            </div>
+          </div>
+          <button
+            onClick={() => setOpen(true)}
+            style={{ ...S.btn, background:"linear-gradient(135deg,#5b8dee,#7cabf0)", whiteSpace:"nowrap", marginRight:0 }}
+          >
+            Share Feedback
+          </button>
+        </div>
+      </div>
+
+      {/* Modal overlay */}
+      {open && (
+        <div style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,.7)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          zIndex:100, padding:"20px",
+        }}
+          onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}
+        >
+          <div style={{
+            ...S.card, maxWidth:420, width:"100%",
+            background:"#1a2d3d", border:"1px solid rgba(91,141,238,.4)",
+            boxShadow:"0 16px 48px rgba(0,0,0,.6)", marginBottom:0,
+          }}>
+            {/* Modal header */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <div style={{ color:"#5b8dee", fontWeight:"bold", fontSize:17, fontFamily:"Georgia,serif" }}>
+                Portal Feedback
+              </div>
+              <button onClick={() => setOpen(false)}
+                style={{ background:"none", border:"none", color:"#8faa9a", fontSize:22, cursor:"pointer", lineHeight:1, padding:"0 4px" }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Description */}
+            <div style={{ color:"#b8c8b8", fontSize:13, lineHeight:1.8, marginBottom:20 }}>
+              We want the SAP Community Portal to work great for everyone! If you've spotted a bug or have an idea for a new feature or improvement, please reach out.
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:20 }}>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                <div style={{ width:22, height:22, borderRadius:"50%", background:"rgba(224,92,92,.2)", border:"1px solid rgba(224,92,92,.4)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0, marginTop:1 }}>🐛</div>
+                <div style={{ color:"#8faa9a", fontSize:13, lineHeight:1.6 }}><strong style={{color:"#e8e0d0"}}>Bug:</strong> Something isn't working as expected</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                <div style={{ width:22, height:22, borderRadius:"50%", background:"rgba(201,168,76,.2)", border:"1px solid rgba(201,168,76,.4)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0, marginTop:1 }}>💡</div>
+                <div style={{ color:"#8faa9a", fontSize:13, lineHeight:1.6 }}><strong style={{color:"#e8e0d0"}}>Enhancement:</strong> An idea to make the portal better</div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ borderTop:"1px solid rgba(255,255,255,.08)", marginBottom:20 }} />
+
+            {/* Email buttons */}
+            <div style={{ color:"#8faa9a", fontSize:12, marginBottom:12, textAlign:"center" }}>
+              Send your feedback to Jacob Harmon
+            </div>
+
+            <a
+              href={`mailto:${EMAIL}?subject=${SUBJECT}&body=${BODY}`}
+              style={{
+                display:"block", textAlign:"center",
+                background:"linear-gradient(135deg,#5b8dee,#7cabf0)",
+                color:"#fff", fontWeight:"bold", fontSize:14,
+                padding:"12px 20px", borderRadius:8,
+                textDecoration:"none", fontFamily:"Georgia,serif",
+                marginBottom:10,
+              }}
+            >
+              Open Email App
+            </a>
+
+            <button
+              onClick={copyEmail}
+              style={{
+                ...S.btnOut, width:"100%", textAlign:"center",
+                borderColor:"rgba(91,141,238,.4)", color:"#5b8dee",
+                fontSize:14, padding:"11px 20px",
+              }}
+            >
+              {copied ? "✅ Copied!" : "Copy Email Address"}
+            </button>
+
+            <div style={{ color:"#8faa9a", fontSize:11, textAlign:"center", marginTop:12, fontStyle:"italic" }}>
+              {EMAIL}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
