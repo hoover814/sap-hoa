@@ -605,13 +605,9 @@ const GOOGLE_SHEETS_CONFIG = {
                     </div>
                     <div style={{fontWeight:"bold",fontSize:16,color:"#e8e0d0",lineHeight:1.3}}>{n.name}</div>
                   </div>
-                  <div style={S.infoRow}><span style={S.infoIcon}>📍</span><span style={{color:"#8faa9a",fontSize:13}}>{n.address}</span></div>
-                  <div style={S.infoRow}><span style={S.infoIcon}>📞</span>
-                    <a href={`tel:${n.phone}`} style={{color:"#5b8dee",fontSize:13,textDecoration:"none"}}>{n.phone}</a>
-                  </div>
-                  <div style={S.infoRow}><span style={S.infoIcon}>✉️</span>
-                    <a href={`mailto:${n.email}`} style={{color:"#5b8dee",fontSize:13,textDecoration:"none",wordBreak:"break-all"}}>{n.email}</a>
-                  </div>
+                  <div style={{color:"#8faa9a",fontSize:13,marginBottom:6}}>{n.address}</div>
+                  <div style={{marginBottom:6}}><a href={`tel:${n.phone}`} style={{color:"#5b8dee",fontSize:13,textDecoration:"none"}}>{n.phone}</a></div>
+                  <div><a href={`mailto:${n.email}`} style={{color:"#5b8dee",fontSize:12,textDecoration:"none",wordBreak:"break-all"}}>{n.email}</a></div>
                   {boardUnlocked && (
                     <div style={{display:"flex",gap:8,marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,.07)"}}>
                       <button style={S.btnOutSm} onClick={()=>startEdit(n)}>✏️ Edit</button>
