@@ -570,13 +570,13 @@ const GOOGLE_SHEETS_CONFIG = {
 
       {/* Card grid */}
       {!loading && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12, marginTop:8 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, marginTop:8 }}>
           {filtered.map((n,idx) => (
             <div key={n.id}
               style={{
                 background: editingId===n.id ? "rgba(201,168,76,.09)" : "rgba(255,255,255,.05)",
                 border: editingId===n.id ? "1px solid rgba(201,168,76,.5)" : "1px solid rgba(201,168,76,.15)",
-                borderRadius:12, padding:20, transition:"all .2s", cursor:"default",
+                borderRadius:12, padding:14, transition:"all .2s", cursor:"default",
               }}>
               {editingId===n.id ? (
                 <div>
