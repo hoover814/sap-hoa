@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 // ── RESPONSIVE HOOK ───────────────────────────────────────────────────────────
 function useIsMobile() {
-  const [mobile, setMobile] = useState(window.innerWidth < 640);
+  const [mobile, setMobile] = useState(window.innerWidth < 900);
   useEffect(() => {
     // Ensure proper viewport meta on mobile
     let meta = document.querySelector("meta[name=viewport]");
@@ -12,7 +12,7 @@ function useIsMobile() {
       document.head.appendChild(meta);
     }
     meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
-    const fn = () => setMobile(window.innerWidth < 640);
+    const fn = () => setMobile(window.innerWidth < 900);
     window.addEventListener("resize", fn);
     return () => window.removeEventListener("resize", fn);
   }, []);
@@ -89,18 +89,18 @@ const avatarGradients = [
 
 // ── STYLES ─────────────────────────────────────────────────────────────────────
 const S = {
-  app:       { fontFamily:"Georgia,'Times New Roman',serif", background:"linear-gradient(135deg,#1a2332 0%,#243447 50%,#1e3a2f 100%)", minHeight:"100vh", color:"#e8e0d0" },
-  header:    { background:"linear-gradient(90deg,#0f1e2e,#1a3a28)", borderBottom:"2px solid #c9a84c", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 },
+  app:       { fontFamily:"Georgia,'Times New Roman',serif", background:"linear-gradient(135deg,#1a2332 0%,#243447 50%,#1e3a2f 100%)", minHeight:"100vh", color:"#e8e0d0", overflowX:"hidden", maxWidth:"100vw" },
+  header:    { background:"linear-gradient(90deg,#0f1e2e,#1a3a28)", borderBottom:"2px solid #c9a84c", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, width:"100%", boxSizing:"border-box" },
   logoIcon:  { width:40, height:40, background:"linear-gradient(135deg,#c9a84c,#e8cc80)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, boxShadow:"0 4px 12px rgba(201,168,76,.4)" },
   logoTitle: { fontSize:20, fontWeight:"bold", color:"#c9a84c", letterSpacing:.5 },
   logoSub:   { fontSize:12, color:"#8faa9a", letterSpacing:2, textTransform:"uppercase" },
   badge:     { background:"#c9a84c", color:"#1a2332", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:"bold", letterSpacing:1 },
   nav:       { display:"flex", gap:4, padding:"10px 12px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)", overflowX:"auto", WebkitOverflowScrolling:"touch" },
-  navBtn: a=>({ padding:"8px 14px", borderRadius:8, border:a?"1px solid #c9a84c":"1px solid transparent", background:a?"rgba(201,168,76,.15)":"transparent", color:a?"#c9a84c":"#8faa9a", cursor:"pointer", fontSize:13, fontFamily:"Georgia,serif", whiteSpace:"nowrap", transition:"all .2s" }),
-  main:      { padding:"20px 16px", maxWidth:1100, margin:"0 auto" },
-  card:      { background:"rgba(255,255,255,.05)", border:"1px solid rgba(201,168,76,.2)", borderRadius:12, padding:"clamp(14px,3vw,24px)", marginBottom:20, backdropFilter:"blur(4px)" },
+  navBtn: a=>({ padding:"7px 10px", borderRadius:8, border:a?"1px solid #c9a84c":"1px solid transparent", background:a?"rgba(201,168,76,.15)":"transparent", color:a?"#c9a84c":"#8faa9a", cursor:"pointer", fontSize:12, fontFamily:"Georgia,serif", whiteSpace:"nowrap", transition:"all .2s" }),
+  main:      { padding:"20px 16px", maxWidth:1100, margin:"0 auto", overflowX:"hidden", width:"100%" },
+  card:      { background:"rgba(255,255,255,.05)", border:"1px solid rgba(201,168,76,.2)", borderRadius:12, padding:"clamp(12px,3vw,22px)", marginBottom:16, backdropFilter:"blur(4px)" },
   cardTitle: { color:"#c9a84c", fontSize:18, marginBottom:16, fontWeight:"bold", borderBottom:"1px solid rgba(201,168,76,.2)", paddingBottom:10 },
-  grid3:     { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:24 },
+  grid3:     { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:12, marginBottom:24 },
   statCard: a=>({ background:`linear-gradient(135deg,rgba(${a},.15),rgba(${a},.05))`, border:`1px solid rgba(${a},.3)`, borderRadius:10, padding:20, textAlign:"center" }),
   statNum:   { fontSize:36, fontWeight:"bold", color:"#e8e0d0", lineHeight:1 },
   statLabel: { fontSize:12, color:"#8faa9a", textTransform:"uppercase", letterSpacing:1, marginTop:6 },
@@ -349,7 +349,7 @@ function ExpandableContactForm({ neighbors, onSubmit }) {
           {/* Form fields — show for add always, or edit once neighbor selected */}
           {(mode === "add" || selected) && (
             <div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12, marginBottom:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:10, marginBottom:16 }}>
                 {[
                   { label:"Full Name / Family Name", field:"name",    ph:"e.g. The Smith Family",       required:true },
                   { label:"Street Address",           field:"address", ph:"e.g. 851 Saints Drive",       required:false },
@@ -473,7 +473,7 @@ function NeighborhoodDirectory() {
 
   return (
     <div>
-      <div style={S.secHead}>👥 Neighborhood Directory</div>
+      <div style={S.secHead}>Neighborhood Directory</div>
       <div style={S.secSub}>Find and connect with your Saint Andrews Park neighbors.</div>
 
       {/* ── Expandable Add / Edit Contact Section ── */}
@@ -535,7 +535,7 @@ const GOOGLE_SHEETS_CONFIG = {
       {/* Controls row */}
       <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
         <input
-          style={{ ...S.input, flex:1, minWidth:200, marginBottom:0 }}
+          style={{ ...S.input, flex:1, minWidth:0, marginBottom:0 }}
           placeholder="🔍 Search by name, address, phone, or email..."
           value={search} onChange={e=>setSearch(e.target.value)}
         />
@@ -545,7 +545,7 @@ const GOOGLE_SHEETS_CONFIG = {
       {boardUnlocked && showAdd && (
         <div style={S.card}>
           <div style={S.cardTitle}>➕ Add New Neighbor</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10 }}>
             {[
               {label:"Full Name / Family Name", field:"name",    ph:"e.g. The Smith Family"},
               {label:"Street Address",           field:"address", ph:"e.g. 113 Saint Andrews Dr"},
@@ -679,7 +679,7 @@ function Dashboard({ onNavigate }) {
 
       {/* Announcements — TOP */}
       <div style={S.card}>
-        <div style={S.cardTitle}>📣 Community Announcements</div>
+        <div style={S.cardTitle}>Community Announcements</div>
         {announcements.length === 0 ? (
           <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
             No announcements at this time. Check back soon! 😊
@@ -697,7 +697,7 @@ function Dashboard({ onNavigate }) {
 
       {/* Events — SECOND */}
       <div style={S.card}>
-        <div style={S.cardTitle}>📅 Upcoming Events</div>
+        <div style={S.cardTitle}>Upcoming Events</div>
         {events.length === 0 ? (
           <div style={{color:"#8faa9a", fontSize:14, textAlign:"center", padding:"20px 0"}}>
             No upcoming events scheduled. Stay tuned! 🎉
@@ -710,7 +710,7 @@ function Dashboard({ onNavigate }) {
             <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8}}>
               <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:15}}>{e.title}</div>
               <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>📅 {e.date}</span>}
+                {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>{e.date}</span>}
                 {e.time && <span style={{...S.pill("#4caf87"), fontSize:11}}>🕐 {e.time}</span>}
               </div>
             </div>
@@ -729,7 +729,7 @@ function Dashboard({ onNavigate }) {
             onMouseEnter={e=>e.currentTarget.style.borderColor="#c9a84c"}
             onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(201,168,76,.3)"}
           >
-            <div style={{fontSize:22, marginBottom:6}}>{l.icon}</div>
+
             <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:14, marginBottom:4, lineHeight:1.3}}>{l.label}</div>
             <div style={{color:"#8faa9a", fontSize:12, lineHeight:1.5}}>{l.desc}</div>
             <div style={{marginTop:8, color:"#c9a84c", fontSize:11, fontWeight:"bold"}}>View →</div>
@@ -744,7 +744,7 @@ function Dashboard({ onNavigate }) {
 function Newsletter() {
   return (
     <div>
-      <div style={S.secHead}>📰 Newsletter</div>
+      <div style={S.secHead}>Newsletter</div>
       <div style={S.secSub}>Stay tuned for updates from your Saint Andrews Park board!</div>
       <div style={{...S.card, textAlign:"center", padding:"60px 20px"}}>
         <div style={{fontSize:64, marginBottom:20}}>📰</div>
@@ -887,7 +887,7 @@ function Contractors() {
 
   return (
     <div>
-      <div style={S.secHead}>🔨 Contractor Directory</div>
+      <div style={S.secHead}>Contractor Directory</div>
       <div style={S.secSub}>Community-recommended contractors for home improvements. Add one you've used!</div>
       {sheetError && sheetError !== "NETWORK_BLOCKED" && (
         <div style={{ ...S.card, border:"1px solid rgba(224,92,92,.3)", background:"rgba(224,92,92,.07)", marginBottom:16 }}>
@@ -953,7 +953,7 @@ function Contractors() {
       {/* Search + Add button */}
       <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
         <input
-          style={{ ...S.input, flex:1, minWidth:200, marginBottom:0 }}
+          style={{ ...S.input, flex:1, minWidth:0, marginBottom:0 }}
           placeholder="🔍 Search contractors..."
           value={search} onChange={e => setSearch(e.target.value)}
         />
@@ -966,7 +966,7 @@ function Contractors() {
       {showAdd && (
         <div style={{ ...S.card, border:"1px solid rgba(201,168,76,.4)" }}>
           <div style={S.cardTitle}>➕ Add a Contractor</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10 }}>
             <div style={{ gridColumn:"1/-1" }}>
               <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>Category</div>
               <select
@@ -1082,7 +1082,7 @@ function Contractors() {
 
 function ContractorGrid({ items, catColor, onDelete }) {
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12 }}>
       {items.map(c => (
         <div key={c.id} style={{
           background:"rgba(255,255,255,.05)",
@@ -1379,7 +1379,7 @@ function BoardTab() {
             Board member info coming soon! 🏡
           </div>
         ) : (
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12}}>
             {boardMembers.map((m, i) => {
               const icons = {"President":"👑","Vice President":"🏛️","Treasurer":"💰","Secretary":"📋"};
               const icon = icons[m.role] || "🏡";
@@ -1449,7 +1449,7 @@ function BoardTab() {
             Board member info coming soon! 🏡
           </div>
         ) : (
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12}}>
             {boardMembers.map((m, i) => {
               const icons = {"President":"👑","Vice President":"🏛️","Treasurer":"💰","Secretary":"📋"};
               const icon = icons[m.role] || "🏡";
@@ -1607,7 +1607,7 @@ function BoardTab() {
                   <div style={{flex:1}}>
                     <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:15, marginBottom:6}}>{e.title}</div>
                     <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:6}}>
-                      {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>📅 {e.date}</span>}
+                      {e.date && <span style={{...S.pill("#5b8dee"), fontSize:11}}>{e.date}</span>}
                       {e.time && <span style={{...S.pill("#4caf87"), fontSize:11}}>🕐 {e.time}</span>}
                     </div>
                     {e.location && <div style={{color:"#8faa9a", fontSize:12, marginBottom:4}}>📍 {e.location}</div>}
@@ -2036,7 +2036,7 @@ function Bylaws() {
       {/* Header */}
       <div style={{ ...S.card, background:"linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border:"2px solid rgba(201,168,76,.4)", marginBottom:24 }}>
         <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
-          <div style={{ fontSize:40 }}>📜</div>
+          
           <div style={{ flex:1 }}>
             <div style={{ ...S.secHead, marginBottom:4 }}>Bylaws & Covenants</div>
             <div style={{ color:"#8faa9a", fontSize:13 }}>
@@ -2065,7 +2065,7 @@ function Bylaws() {
         <div style={{ ...S.cardTitle, marginBottom:12 }}>🔍 Search the Covenants</div>
         <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
           <input
-            style={{ flex:1, padding:"11px 16px", borderRadius:8, background:"rgba(255,255,255,.07)", border:"1px solid rgba(201,168,76,.3)", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, outline:"none", minWidth:200 }}
+            style={{ flex:1, padding:"11px 16px", borderRadius:8, background:"rgba(255,255,255,.07)", border:"1px solid rgba(201,168,76,.3)", color:"#e8e0d0", fontFamily:"Georgia,serif", fontSize:14, outline:"none", minWidth:0 }}
             placeholder="Search for fences, pets, trees, assessments, pools..."
             value={query}
             onChange={e => { setQuery(e.target.value); setOpen(null); }}
@@ -2281,7 +2281,7 @@ function ARCRequest() {
       {/* Header */}
       <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(26,35,50,.9),rgba(40,55,75,.9))", border: "2px solid rgba(201,168,76,.4)", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 40 }}>🌳</div>
+          
           <div>
             <div style={{ ...S.secHead, marginBottom: 4 }}>Architectural Change Request</div>
 
@@ -2300,7 +2300,7 @@ function ARCRequest() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 14 }}>
 
         {/* ── Left column: Homeowner Info ── */}
         <div style={S.card}>
@@ -2482,7 +2482,7 @@ function ARCRequest() {
       {/* ── Submit ── */}
       <div style={{ marginTop: 20, display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
         <button
-          style={{ ...S.btn, opacity: submitting ? .6 : 1, minWidth: 180 }}
+          style={{ ...S.btn, opacity: submitting ? .6 : 1, width:"100%" }}
           onClick={handleSubmit}
           disabled={submitting}
         >
@@ -2505,6 +2505,7 @@ export default function App() {
   const [portalUnlocked, setPortalUnlocked] = useState(false);
   const [pwInput, setPwInput]     = useState("");
   const [pwError, setPwError]     = useState(false);
+  const [menuOpen, setMenuOpen]   = useState(false);
   const isMobile                  = useIsMobile();
 
   const unlock = () => {
@@ -2546,7 +2547,7 @@ export default function App() {
 
         {/* Expandable help panel */}
         {helpOpen && (
-          <div style={{ position:"absolute", right:0, top:44, width:280, zIndex:20,
+          <div style={{ position:"absolute", right:0, top:44, width:"min(280px,85vw)", zIndex:20,
             background:"#1a2332", border:"1px solid rgba(201,168,76,.4)",
             borderRadius:12, padding:20, boxShadow:"0 8px 32px rgba(0,0,0,.8)" }}>
             <div style={{ color:"#c9a84c", fontWeight:"bold", fontSize:14, marginBottom:10, fontFamily:"Georgia,serif" }}>
@@ -2625,23 +2626,124 @@ export default function App() {
     </div>
   );
 
+  const TAB_ICONS = {};
+
   // ── MAIN PORTAL ──
   return (
     <div style={S.app}>
-      <div style={{...S.header, padding: isMobile ? "12px 16px" : "20px 32px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:14}}>
+
+      {/* ── HEADER ── */}
+      <div style={{ ...S.header, padding:"12px 16px" }}>
+        {/* Logo */}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={S.logoIcon}>⛳</div>
           <div>
-            <div style={{...S.logoTitle, fontSize: isMobile ? 18 : 26}}>Saint Andrews Park</div>
-            {!isMobile && <div style={S.logoSub}>Homeowners Association</div>}
+            <div style={{ ...S.logoTitle, fontSize: isMobile ? 17 : 22 }}>Saint Andrews Park</div>
+            <div style={{ ...S.logoSub, fontSize:11 }}>Homeowners Association</div>
           </div>
         </div>
-        {!isMobile && <div style={S.badge}>COMMUNITY PORTAL</div>}
+        {/* Right side — hamburger on mobile, badge + tabs on desktop */}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {!isMobile && <div style={S.badge}>COMMUNITY PORTAL</div>}
+          {/* Hamburger button — always visible */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{ background:"none", border:"none", cursor:"pointer", padding:"6px 8px",
+              display:"flex", flexDirection:"column", gap:5, alignItems:"center", justifyContent:"center" }}
+            aria-label="Menu"
+          >
+            {menuOpen ? (
+              <span style={{ color:"#c9a84c", fontSize:22, lineHeight:1 }}>✕</span>
+            ) : (
+              <>
+                <span style={{ display:"block", width:22, height:2, background:"#c9a84c", borderRadius:2 }} />
+                <span style={{ display:"block", width:22, height:2, background:"#c9a84c", borderRadius:2 }} />
+                <span style={{ display:"block", width:22, height:2, background:"#c9a84c", borderRadius:2 }} />
+              </>
+            )}
+          </button>
+        </div>
       </div>
-      <div style={{...S.nav, padding: isMobile ? "8px 12px" : "10px 16px"}}>
-        {TABS.map(t=><button key={t.id} style={S.navBtn(tab===t.id)} onClick={()=>setTab(t.id)}>{t.label}</button>)}
+
+      {/* ── CURRENT TAB INDICATOR ── */}
+      <div style={{ padding:"10px 16px", background:"rgba(0,0,0,.2)", borderBottom:"1px solid rgba(201,168,76,.2)",
+        display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontSize:14, fontWeight:"bold" }}>
+          {TABS.find(t=>t.id===tab)?.label}
+        </span>
+        <span style={{ color:"#8faa9a", fontSize:12 }}>Tap ☰ to navigate</span>
       </div>
-      <div style={{...S.main, padding: isMobile ? "16px 12px" : "32px"}}>{render()}</div>
+
+      {/* ── SLIDE-IN MENU OVERLAY ── */}
+      {menuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setMenuOpen(false)}
+            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", zIndex:40 }}
+          />
+          {/* Drawer */}
+          <div style={{
+            position:"fixed", top:0, right:0, bottom:0, width: isMobile ? "75vw" : 300,
+            background:"linear-gradient(180deg,#0f1e2e 0%,#1a3a28 100%)",
+            borderLeft:"2px solid rgba(201,168,76,.4)",
+            zIndex:50, display:"flex", flexDirection:"column",
+            boxShadow:"-8px 0 32px rgba(0,0,0,.5)",
+            animation:"slideIn .25s ease-out",
+          }}>
+            {/* Drawer header */}
+            <div style={{ padding:"20px 20px 16px", borderBottom:"1px solid rgba(201,168,76,.2)",
+              display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontWeight:"bold", fontSize:15 }}>
+                Navigation
+              </div>
+              <button onClick={() => setMenuOpen(false)}
+                style={{ background:"none", border:"none", color:"#8faa9a", fontSize:20, cursor:"pointer", padding:"2px 6px" }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Nav items */}
+            <div style={{ flex:1, overflowY:"auto", padding:"8px 0" }}>
+              {TABS.map(t => (
+                <button key={t.id}
+                  onClick={() => { setTab(t.id); setMenuOpen(false); }}
+                  style={{
+                    display:"flex", alignItems:"center", gap:14, width:"100%",
+                    padding:"14px 20px", background: tab===t.id ? "rgba(201,168,76,.12)" : "transparent",
+                    border:"none", borderLeft: tab===t.id ? "3px solid #c9a84c" : "3px solid transparent",
+                    color: tab===t.id ? "#c9a84c" : "#b8c8b8",
+                    fontFamily:"Georgia,serif", fontSize:15, cursor:"pointer", textAlign:"left",
+                    transition:"all .15s",
+                  }}
+                  onMouseEnter={e => { if(tab!==t.id) e.currentTarget.style.background="rgba(255,255,255,.05)"; }}
+                  onMouseLeave={e => { if(tab!==t.id) e.currentTarget.style.background="transparent"; }}
+                >
+                  <span>{t.label}</span>
+                  {tab===t.id && <span style={{ marginLeft:"auto", fontSize:12, color:"#c9a84c" }}>●</span>}
+                </button>
+              ))}
+            </div>
+
+            {/* Drawer footer */}
+            <div style={{ padding:"16px 20px", borderTop:"1px solid rgba(201,168,76,.15)" }}>
+              <div style={{ color:"#8faa9a", fontSize:11, textAlign:"center" }}>
+                Saint Andrews Park HOA · Marietta, GA
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ ...S.main, padding: isMobile ? "16px 12px" : "32px" }}>{render()}</div>
+
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); }
+          to   { transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 }
