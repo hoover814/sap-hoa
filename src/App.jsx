@@ -151,12 +151,14 @@ async function fetchContractors() {
   };
   return data.values.map((row, i) => ({
     id: i + 1,
-    category: categoryMap[row[0]] || "others",
-    business:  row[1]||"",
-    contact:   row[2]||"",
-    phone:     row[3]||"",
-    website:   row[4]||"",
-    note:      row[5]||"",
+    category:      categoryMap[row[0]] || "others",
+    business:      row[1]||"",
+    contact:       row[2]||"",
+    phone:         row[3]||"",
+    website:       row[4]||"",
+    recommendedBy: row[5]||"",
+    note:          row[6]||"",
+    votes:         parseInt(row[7]||"0") || 0,
   }));
 }
 
@@ -912,7 +914,7 @@ function Contractors() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
-  const [newC, setNewC] = useState({ category:"painters", business:"", contact:"", phone:"", website:"", note:"" });
+  const [newC, setNewC] = useState({ category:"painters", business:"", contact:"", phone:"", website:"", recommendedBy:"", note:"" });
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const loadContractors = () => {
@@ -952,7 +954,7 @@ function Contractors() {
     try {
       const res  = await fetch(CONTRACTORS_SCRIPT_URL, {
         method: "POST",
-        body:   JSON.stringify({ action:"add", ...newC }),
+        body:   JSON.stringify({ action:"add", ...newC, recommendedBy: newC.recommendedBy || "" }),
       });
       const json = await res.json();
       if (json.success) {
@@ -1104,10 +1106,11 @@ function Contractors() {
               </select>
             </div>
             {[
-              { label:"Business Name *", field:"business", ph:"e.g. Atlanta Pro Painters" },
-              { label:"Contact Person",  field:"contact",  ph:"e.g. John Smith" },
-              { label:"Phone Number",    field:"phone",    ph:"e.g. (404) 555-0100" },
-              { label:"Website",         field:"website",  ph:"e.g. example.com" },
+              { label:"Business Name *",  field:"business",      ph:"e.g. Atlanta Pro Painters" },
+              { label:"Contact Person",   field:"contact",       ph:"e.g. John Smith" },
+              { label:"Phone Number",     field:"phone",         ph:"e.g. (404) 555-0100" },
+              { label:"Website",          field:"website",       ph:"e.g. example.com" },
+              { label:"Your Name",        field:"recommendedBy", ph:"e.g. Jacob Harmon" },
             ].map(({label, field, ph}) => (
               <div key={field}>
                 <div style={{ color:"#c9a84c", fontSize:12, marginBottom:4 }}>{label}</div>
@@ -1204,14 +1207,47 @@ function Contractors() {
   );
 }
 
+function ThumbsUp({ contractor, catColor }) {
+  const key = `thumbs_${contractor.business.replace(/\s/g,"_")}`;
+  const [votes, setVotes]   = useState(contractor.votes || 0);
+  const [voted, setVoted]   = useState(() => {
+    try { return localStorage.getItem(key) === "1"; } catch { return false; }
+  });
+
+  const handleVote = async () => {
+    if (voted) return;
+    setVotes(v => v + 1);
+    setVoted(true);
+    try { localStorage.setItem(key, "1"); } catch {}
+    try {
+      const p = new URLSearchParams({ action:"thumbsUp", business: contractor.business });
+      await fetch(`${CONTRACTORS_SCRIPT_URL}?${p}`, { mode:"no-cors" });
+    } catch {}
+  };
+
+  return (
+    <button onClick={handleVote} title={voted ? "You already voted!" : "Recommend this contractor"}
+      style={{
+        display:"flex", alignItems:"center", gap:5, flexShrink:0,
+        background: voted ? `${catColor}22` : "rgba(255,255,255,.06)",
+        border: `1px solid ${voted ? catColor : "rgba(255,255,255,.1)"}`,
+        borderRadius:20, padding:"4px 10px", cursor: voted ? "default" : "pointer",
+        color: voted ? catColor : "#8faa9a", fontSize:13, transition:"all .2s",
+      }}>
+      <span style={{fontSize:14}}>👍</span>
+      <span style={{fontWeight:"bold"}}>{votes}</span>
+    </button>
+  );
+}
+
 function ContractorGrid({ items, catColor, onDelete }) {
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12 }}>
+    <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:10 }}>
       {items.map(c => (
         <div key={c.id} style={{
           background:"rgba(255,255,255,.05)",
           border:`1px solid ${catColor}22`,
-          borderRadius:12, padding:20,
+          borderRadius:12, padding:16,
           transition:"all .2s",
           position:"relative",
         }}>
@@ -1222,44 +1258,44 @@ function ContractorGrid({ items, catColor, onDelete }) {
             borderRadius:"12px 12px 0 0",
           }} />
 
-          <div style={{ fontWeight:"bold", fontSize:16, color:"#e8e0d0", marginBottom:10, marginTop:4 }}>
-            {c.business}
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, marginTop:4, marginBottom:10 }}>
+            <div style={{ fontWeight:"bold", fontSize:16, color:"#e8e0d0" }}>{c.business}</div>
+            <ThumbsUp contractor={c} catColor={catColor} />
           </div>
 
           {c.contact && (
-            <div style={{ ...S.infoRow, marginBottom:6 }}>
-              <span style={{ ...S.infoIcon, color: catColor }}>👤</span>
-              <span style={{ color:"#8faa9a", fontSize:13 }}>{c.contact}</span>
-            </div>
+            <div style={{ color:"#8faa9a", fontSize:13, marginBottom:6 }}>{c.contact}</div>
           )}
           {c.phone && (
-            <div style={{ ...S.infoRow, marginBottom:6 }}>
-              <span style={{ ...S.infoIcon, color: catColor }}>📞</span>
+            <div style={{ marginBottom:6 }}>
               <a href={`tel:${c.phone}`} style={{ color:"#5b8dee", fontSize:13, textDecoration:"none" }}>{c.phone}</a>
             </div>
           )}
           {c.website && (
-            <div style={{ ...S.infoRow, marginBottom:6 }}>
-              <span style={{ ...S.infoIcon, color: catColor }}>🌐</span>
+            <div style={{ marginBottom:6 }}>
               <a href={`https://${c.website.replace(/^https?:\/\//, "")}`} target="_blank" rel="noreferrer"
                 style={{ color:"#5b8dee", fontSize:13, textDecoration:"none", wordBreak:"break-all" }}>
                 {c.website}
               </a>
             </div>
           )}
+          {c.recommendedBy && (
+            <div style={{ color:"#8faa9a", fontSize:12, marginTop:8 }}>
+              Recommended by <strong style={{color:"#e8e0d0"}}>{c.recommendedBy}</strong>
+            </div>
+          )}
           {c.note && (
             <div style={{
-              marginTop:12, padding:"10px 12px",
+              marginTop:10, padding:"10px 12px",
               background:`${catColor}11`,
               border:`1px solid ${catColor}22`,
               borderRadius:8, fontSize:12,
               color:"#ccc5b5", lineHeight:1.6,
               fontStyle:"italic",
             }}>
-              💬 "{c.note}"
+              "{c.note}"
             </div>
           )}
-
 
         </div>
       ))}
