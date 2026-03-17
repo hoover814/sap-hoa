@@ -17,7 +17,7 @@ function useIsMobile() {
     const meta = document.querySelector("meta[name=viewport]");
     // Use optional chaining to prevent reading 'includes' or 'content' on null
     if (meta?.content?.includes('some-value')) { 
-      meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
+      // do something
     }
     
 
@@ -433,6 +433,7 @@ function NeighborhoodDirectory() {
   const [usingSheets, setUsingSheets] = useState(false);
 
   const [boardUnlocked, setBoardUnlocked] = useState(false);
+  const [portalUnlocked, setPortalUnlocked] = useState(false);
   const [pwInput, setPwInput]   = useState("");
   const [pwError, setPwError]   = useState(false);
 
@@ -2679,12 +2680,29 @@ export default function App() {
   const [menuOpen, setMenuOpen]   = useState(false);
   const isMobile                  = useIsMobile();
 
-  const unlock = () => {
-    if (pwInput === PORTAL_PASSWORD) {
-      setPortalUnlocked(true);
+  const unlock = async () => {
+    try {
       setPwError(false);
-      setPwInput("");
-    } else {
+      
+      const response = await fetch('/api/checkPassword', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: pwInput }),
+      });
+
+      if (response.ok) {
+        // Success: 200 OK
+        setPortalUnlocked(true);
+        setPwError(false);
+        setPwInput("");
+      } else {
+        // Failure: 403 or other
+        setPwError(true);
+      }
+    } catch (err) {
+      console.error("Auth error:", err);
       setPwError(true);
     }
   };

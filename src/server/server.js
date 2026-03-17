@@ -10,16 +10,30 @@ async function createDevServer() {
   const isProd = process.env.NODE_ENV === 'production';
   const root = process.cwd();
 
+  app.use(express.json());
+
+   // --- 1. API ROUTES FIRST ---
+  app.post('/api/checkPassword', (req, res) => {
+      const { password } = req.body;
+      const correctPassword = process.env.RESIDENT_PW;
+
+      if (!correctPassword) {
+          console.error("Environment variable RESIDENT_PW is not set!");
+          return res.status(500).json({ error: "Server configuration error" });
+      }
+
+      if (password === correctPassword) {
+          return res.status(200).json({ success: true });
+      } else {
+          return res.status(403).json({ success: false, message: "Incorrect password" });
+      }
+  });
+
   if (isProd) {
     
     app.use(express.static(path.resolve(root, 'dist/client'), {
       index: false, // Don't serve index.html automatically
     }));
-
-    // 2. API Routes
-    app.get('/api/hello', (req, res) => {
-      res.json({ message: 'Hello from Production API!' });
-    });
 
     // 3. Production SSR Catch-all
     app.get(/^(?!\/api).+/, async (req, res) => {
@@ -45,11 +59,6 @@ async function createDevServer() {
     });
   } else {
     app.use(morgan('dev'));
-
-    // --- 1. API ROUTES FIRST ---
-    app.get('/api/hello', (req, res) => {
-        res.json({ message: 'Hello from the API!' });
-    });
 
     const vite = await createServer({
         server: { middlewareMode: true },
