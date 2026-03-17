@@ -6,20 +6,20 @@ function useIsMobile() {
   const [mobile, setMobile] = useState(false);
 
   useEffect(() => {
-    // 2. This code ONLY runs in the browser, where 'window' and 'document' exist
-    const checkMobile = () => setMobile(window.innerWidth < 900);
-    
-    // Perform initial check now that we are in the browser
+    const checkMobile = () => {
+      if (typeof window !== 'undefined') {
+        setMobile(window.innerWidth < 900);
+      }
+    };
+
     checkMobile();
 
-    // Handle viewport meta
-    let meta = document.querySelector("meta[name=viewport]");
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "viewport";
-      document.head.appendChild(meta);
+    const meta = document.querySelector("meta[name=viewport]");
+    // Use optional chaining to prevent reading 'includes' or 'content' on null
+    if (meta?.content?.includes('some-value')) { 
+      meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
     }
-    meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
+    
 
     const fn = () => setMobile(window.innerWidth < 900);
     window.addEventListener("resize", fn);
