@@ -2,9 +2,17 @@ import { useState, useEffect, useRef } from "react";
 
 // ── RESPONSIVE HOOK ───────────────────────────────────────────────────────────
 function useIsMobile() {
-  const [mobile, setMobile] = useState(window.innerWidth < 900);
+  // 1. Initialize to false (or a sensible default for SSR)
+  const [mobile, setMobile] = useState(false);
+
   useEffect(() => {
-    // Ensure proper viewport meta on mobile
+    // 2. This code ONLY runs in the browser, where 'window' and 'document' exist
+    const checkMobile = () => setMobile(window.innerWidth < 900);
+    
+    // Perform initial check now that we are in the browser
+    checkMobile();
+
+    // Handle viewport meta
     let meta = document.querySelector("meta[name=viewport]");
     if (!meta) {
       meta = document.createElement("meta");
@@ -12,10 +20,13 @@ function useIsMobile() {
       document.head.appendChild(meta);
     }
     meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
+
     const fn = () => setMobile(window.innerWidth < 900);
     window.addEventListener("resize", fn);
+    
     return () => window.removeEventListener("resize", fn);
   }, []);
+
   return mobile;
 }
 

@@ -4,5 +4,10 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-base: '/sap-hoa/',
+  server: {
+    proxy: {
+      // Proxy requests starting with '/api' to your Node.js server
+      '/api': 'http://localhost:3000',
+    },
+  },
 })
