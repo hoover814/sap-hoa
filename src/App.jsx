@@ -33,8 +33,8 @@ const CONTRACTORS_SHEET_CONFIG = {
 };
 // Paste your Apps Script Web App URL here after deploying the script
 const CONTRACTORS_SCRIPT_URL = import.meta.env.VITE_CONTRACTORS_SCRIPT_URL;
-const BOARD_PASSWORD = (import.meta.env.VITE_BOARD_PASSWORD || "").trim();
-const PORTAL_PASSWORD = (import.meta.env.VITE_PORTAL_PASSWORD || "").trim();
+const BOARD_PASSWORD = (import.meta.env.VITE_BOARD_PASSWORD || "SAP2026").trim();
+const PORTAL_PASSWORD = (import.meta.env.VITE_PORTAL_PASSWORD || "Saints26!").trim();
 
 const BOARD_CONTENT_CONFIG = {
   apiKey:        import.meta.env.VITE_GOOGLE_API_KEY,
