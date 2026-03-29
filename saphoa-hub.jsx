@@ -21,34 +21,34 @@ function useIsMobile() {
 
 // ── CONFIGURATION — update these when deploying to GitHub ──────────────────────
 const GOOGLE_SHEETS_CONFIG = {
-  apiKey: "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
-  spreadsheetId: "15BjVviB6RcHlGjg_Kc9-GSgea7RgXKEVWhO44XDJEDQ",
+  apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+  spreadsheetId: import.meta.env.VITE_DIRECTORY_SHEET_ID,
   range: "Directory!A2:F",
 };
 
 const CONTRACTORS_SHEET_CONFIG = {
-  apiKey: "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
-  spreadsheetId: "1IxhTXHK4ys6xiciBwvbBBeu-DFtD_1OCpuw1-d-QRYQ",
+  apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+  spreadsheetId: import.meta.env.VITE_CONTRACTORS_SHEET_ID,
   range: "Contractors!A2:F",
 };
 // Paste your Apps Script Web App URL here after deploying the script
-const CONTRACTORS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1yzQZkdC_KplEPzHEMvRL9GesSTOdqC9Nv_TqNA3n98M1O5G2E02col6KKTj-fju50g/exec";
-const BOARD_PASSWORD = "SAP2026"; // change before deploying!
-const PORTAL_PASSWORD = "Saints26!";
+const CONTRACTORS_SCRIPT_URL = import.meta.env.VITE_CONTRACTORS_SCRIPT_URL;
+const BOARD_PASSWORD = import.meta.env.VITE_BOARD_PASSWORD;
+const PORTAL_PASSWORD = import.meta.env.VITE_PORTAL_PASSWORD;
 
 const BOARD_CONTENT_CONFIG = {
-  apiKey:        "AIzaSyCcdVM9E499Vketlm7ReKeKCLjpjsvnTyU",
-  spreadsheetId: "1EMVVAN2rcgbYsbKo7BI2V4bHgn5NHHQREv3PbEa8e1w",
+  apiKey:        import.meta.env.VITE_GOOGLE_API_KEY,
+  spreadsheetId: import.meta.env.VITE_BOARD_CONTENT_SHEET_ID,
   announcementsRange: "Announcements!A2:D",
   eventsRange:        "Events!A2:F",
   todoRange:          "TodoList!A2:F",
   boardInfoRange:     "BoardInfo!A3:F10",
 };
 // Paste your Board Content Apps Script URL here after deploying
-const BOARD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBN_4H7Yt567wApGQAFXyxozFwysG2PpaKDiNOOLeo4lxCI4_qQeXzGwaDD0LH3kKP/exec";
-const ARC_SCRIPT_URL   = "https://script.google.com/macros/s/AKfycbxEYB2-dlxJaz2YeZGkltkwgo43-LdpvNV1Vs0om7TLI9GRg2stBOJqALdNEIrv-8KZ/exec";
+const BOARD_SCRIPT_URL = import.meta.env.VITE_BOARD_SCRIPT_URL;
+const ARC_SCRIPT_URL   = import.meta.env.VITE_ARC_SCRIPT_URL;
 // Paste your Directory Apps Script Web App URL here after deploying
-const DIRECTORY_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybEBISWuZwCrhQsEB5GGIfvmDwXT8YuJEzEeiddl-b1JGn0VRKkttp6BINeJkB8MCL/exec";
+const DIRECTORY_SCRIPT_URL = import.meta.env.VITE_DIRECTORY_SCRIPT_URL;
 
 // ── NEIGHBORHOOD CENTER (Saint Andrews Park, Marietta GA) ──────────────────────
 const NEIGHBORHOOD_CENTER = [33.96928, -84.39468];
