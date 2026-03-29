@@ -867,18 +867,106 @@ function FeedbackCard() {
 }
 
 // ── NEWSLETTER ─────────────────────────────────────────────────────────────────
+const NEWSLETTERS = [
+  {
+    id: 1,
+    title: "Welcome to the SAP Community Portal",
+    date: "March 2026",
+    sections: [
+      {
+        heading: "",
+        body: "The Saint Andrews Park Community Portal is your central hub for neighborhood information, resources, and connections. Here is a quick guide to everything available to you."
+      },
+      {
+        heading: "Dashboard",
+        body: "Your starting point. Check here for the latest board announcements, upcoming community events, and quick links to every section of the portal."
+      },
+      {
+        heading: "Directory",
+        body: "A private listing of Saint Andrews Park homeowners and residents. Search by name, address, or phone to find a neighbor. Need to add or update your information? Use the form at the top of the page — all submissions are reviewed by the board before going live."
+      },
+      {
+        heading: "Contractors",
+        body: "Home service professionals recommended by your neighbors. Browse by category, add a contractor you have used, and give a thumbs up to ones you would recommend."
+      },
+      {
+        heading: "Architectural Change Request",
+        body: "Planning an exterior change to your home? Submit your request here and the board will review and respond within 10 days. Attach photos or documents to help speed up the process."
+      },
+      {
+        heading: "Bylaws",
+        body: "Search and browse the Saint Andrews Park Declaration of Covenants and Restrictions. Use the search bar to quickly find rules on specific topics or download a full copy for your records."
+      },
+      {
+        heading: "Board",
+        body: "Meet your HOA board members and find their contact information. Board members can log in here to manage announcements, events, and board tasks."
+      },
+      {
+        heading: "Feedback",
+        body: "Found a bug or have an idea to improve the portal? Use the feedback card at the bottom of the Dashboard to send us a note."
+      },
+    ]
+  },
+];
+
 function Newsletter() {
+  const [openId, setOpenId] = useState(NEWSLETTERS[0]?.id || null);
+
   return (
     <div>
       <div style={S.secHead}>Newsletter</div>
-      <div style={S.secSub}>Stay tuned for updates from your Saint Andrews Park board!</div>
-      <div style={{...S.card, textAlign:"center", padding:"60px 20px"}}>
-        <div style={{fontSize:64, marginBottom:20}}>📰</div>
-        <div style={{color:"#c9a84c", fontWeight:"bold", fontSize:24, marginBottom:12}}>Coming Soon!</div>
-        <div style={{color:"#8faa9a", fontSize:15, lineHeight:1.8, maxWidth:400, margin:"0 auto"}}>
-          The Saint Andrews Park community newsletter is on its way. Check back soon for the latest news, updates, and highlights from your neighborhood! 🏡
-        </div>
-      </div>
+      <div style={S.secSub}>Stay up to date with news and updates from Saint Andrews Park.</div>
+
+      {NEWSLETTERS.map((n, idx) => {
+        const isOpen = openId === n.id;
+        return (
+          <div key={n.id} style={{ ...S.card, padding:0, overflow:"hidden", marginBottom:12 }}>
+            {/* Header */}
+            <div
+              onClick={() => setOpenId(isOpen ? null : n.id)}
+              style={{
+                padding:"16px 20px", cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"space-between",
+                background: isOpen ? "rgba(201,168,76,.07)" : "transparent",
+                borderBottom: isOpen ? "1px solid rgba(201,168,76,.15)" : "none",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(201,168,76,.07)"}
+              onMouseLeave={e => e.currentTarget.style.background = isOpen ? "rgba(201,168,76,.07)" : "transparent"}
+            >
+              <div>
+                <div style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontWeight:"bold", fontSize:16 }}>
+                  {n.title}
+                </div>
+                <div style={{ color:"#8faa9a", fontSize:12, marginTop:3 }}>{n.date}</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                {idx === 0 && (
+                  <span style={{ ...S.pill("#4caf87"), fontSize:11 }}>Latest</span>
+                )}
+                <div style={{ color:"#c9a84c", fontSize:18, transition:"transform .2s", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</div>
+              </div>
+            </div>
+
+            {/* Content */}
+            {isOpen && (
+              <div style={{ padding:"20px 24px" }}>
+                {n.sections.map((sec, si) => (
+                  <div key={si} style={{ marginBottom: sec.heading ? 20 : 16 }}>
+                    {sec.heading && (
+                      <div style={{ color:"#c9a84c", fontFamily:"Georgia,serif", fontWeight:"bold", fontSize:15, marginBottom:6, paddingBottom:6, borderBottom:"1px solid rgba(201,168,76,.15)" }}>
+                        {sec.heading}
+                      </div>
+                    )}
+                    <div style={{ color:"#b8c8b8", fontSize:14, lineHeight:1.9 }}>
+                      {sec.body}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -2163,7 +2251,7 @@ function Bylaws() {
   const [query, setQuery]      = useState("");
   const [openArticle, setOpen] = useState(null);
   const [pdfOpen, setPdfOpen]  = useState(false);
-  const PDF_URL = "/sap-hoa/Saint_Andrews_Park_Neighborhood_Covenants.pdf";
+  const PDF_URL = "/Saint_Andrews_Park_Neighborhood_Covenants.pdf";
 
   const q = query.toLowerCase().trim();
 
